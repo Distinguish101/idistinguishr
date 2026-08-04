@@ -3,19 +3,32 @@
 // Reference mockup: mockups.html → #auth
 // Reference spec: booking-flow-spec.md → "5. Sign Up / Login"
 //
-// TODO:
-// - Toggle Sign Up / Login
-// - Sign Up: name, email, password → bcrypt hash → create User(role=STUDENT)
-// - Google OAuth via next-auth (already wired in src/lib/auth.ts)
-// - Context banner showing the in-progress booking (teacher + date/time) so
-//   the user doesn't lose their place — pull from the pending Booking id
-// - On success → /checkout
+// The booking-context banner (persisting a pending teacher/time selection
+// through signup) belongs to the student booking flow — not built yet
+// (that's step 4 in the README's build order). This covers plain
+// signup/login + role-based routing, which teacher-side pages need now.
 
-export default function AuthPage() {
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { AuthForm } from "./AuthForm";
+
+export default async function AuthPage() {
+  const session = await auth();
+  if (session?.user) {
+    redirect(session.user.role === "TEACHER" ? "/teacher/profile" : "/dashboard");
+  }
+
+  const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID);
+
   return (
-    <main>
-      <h1>Sign Up / Login</h1>
-      <p>Auth forms + OAuth + booking context banner. See TODO comments above.</p>
+    <main className="auth-page">
+      <div className="auth-card">
+        <span className="eyebrow">Sign up or log in</span>
+        <h1 className="t-display-l" style={{ marginBottom: 20 }}>
+          IDistinguishR
+        </h1>
+        <AuthForm googleEnabled={googleEnabled} />
+      </div>
     </main>
   );
 }

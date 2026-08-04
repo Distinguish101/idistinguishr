@@ -1,0 +1,34 @@
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { SignOutButton } from "./SignOutButton";
+
+export async function NavBar() {
+  const session = await auth();
+
+  return (
+    <nav className="topbar">
+      <div className="wrap topbar-inner">
+        <Link href="/" className="logo">
+          <span className="mark">♪</span> IDistinguishR
+        </Link>
+        <div className="topbar-links">
+          {session?.user ? (
+            <>
+              {session.user.role === "TEACHER" ? (
+                <>
+                  <Link href="/teacher/profile">Profile</Link>
+                  <Link href="/teacher/availability">Availability</Link>
+                </>
+              ) : (
+                <Link href="/dashboard">Dashboard</Link>
+              )}
+              <SignOutButton />
+            </>
+          ) : (
+            <Link href="/auth">Log in</Link>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
