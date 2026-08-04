@@ -196,13 +196,97 @@ far; extend as more screens get built.
 
 ---
 
+## 12. Search/results with filtering, plus the public Teacher Profile screen — US-01 through US-08
+
+The README's step 3 is "Search/results with filtering," which maps to the
+Homepage and Results screens. Bundled in the public Teacher Profile screen
+too (not its own numbered step, but Results' "View Profile" links need
+somewhere to go, and the availability-preview logic it needs is shared
+with Results' availability filter) — confirmed with the user before
+starting.
+
+- **`src/lib/availability.ts`** — new: `getUpcomingAvailability(teacherId, days)`
+  computes open time windows for the next N days by applying
+  `AvailabilityException` on top of the recurring `AvailabilityRule`
+  pattern, per the data model doc's "compute at request time, don't
+  pre-generate slot rows" note. Doesn't subtract existing bookings yet
+  (Booking doesn't exist as a concept until the booking-flow step) and
+  drops a whole rule-window on a partial `BLOCKED` overlap rather than
+  splitting it — good enough for a preview/filter, not precise enough for
+  actual slot selection, which the booking step will need to handle
+  properly.
+- **`src/lib/teacher-search.ts`** — new: `BOOKABLE_WHERE` (the
+  `approvalStatus: APPROVED && stripeOnboardingComplete: true` gate from
+  the data model doc), `searchTeachers()` (filter/sort/paginate),
+  `getInstrumentOptions()` (distinct instruments across bookable
+  teachers, derived at request time — there's no separate Instruments
+  table per the data model's MVP decision), `getFeaturedTeachers()`.
+  Availability-dependent sort (`soonest`) and filter (`availableThisWeek`)
+  aren't DB columns, so those pull a capped 100-teacher candidate pool and
+  compute in JS rather than querying the whole table — noted in comments
+  as an MVP-scale shortcut, not something that scales indefinitely.
+- **`src/app/page.tsx`** (Homepage) — search form (instrument required,
+  location/online optional) posting a plain GET to `/results`; top-rated
+  teachers section. No client JS needed — it's a real HTML form, so
+  results stay bookmarkable per the US-01 AC.
+- **`src/app/results/page.tsx`** (Results) — two plain GET forms (top
+  search bar; sidebar filters + sort), all state read from
+  `searchParams`. Filters: format, price range, minimum rating,
+  "available this week". Sort: relevance (proxied by rating, no real
+  relevance engine exists), price, rating, soonest available. Simple
+  prev/next pagination, 12 per page. Empty state per US-05.
+- **`src/app/teachers/[id]/page.tsx`** (Teacher Profile) — bio,
+  credentials (split on newlines into a list, since the field is
+  free-text per the data model doc — no fake structure invented),
+  reviews (empty state, since nothing can generate a real review until
+  the booking + review steps exist), and an availability preview (next 4
+  open dates) built on `getUpcomingAvailability`. Two edge cases handled
+  distinctly: a nonexistent ID is a real 404; an existing-but-not-bookable
+  profile (pending approval, or Stripe onboarding incomplete) shows a
+  "not available right now" message instead, since a 404 would be
+  misleading for a profile that does exist.
+- **Styling** — ported the Homepage/Results/Profile sections of
+  `idistinguishr-style-guide.html` / `mockups.html` into `globals.css`
+  (hero, search card, teacher cards, filter sidebar, result rows, profile
+  layout, mini-cal, note-rating).
+
+**Known gap:** nothing shows up in search until a teacher is both
+approved and has completed Stripe onboarding — correct per the data
+model, but since neither the admin-approval UI nor Stripe Connect exist
+yet, there's currently no way to get a teacher into that state except by
+flipping the two DB fields manually (same manual-approval pattern noted
+for `approvalStatus` in US-30). Worth a `prisma/seed.ts` at some point
+(the `db:seed` script in `package.json` already expects one, but the file
+doesn't exist yet) so there's always demo-able data locally — not built
+now since it wasn't asked for.
+
+**Testing performed:** seeded three teachers (one fully bookable with
+weekly availability + 2 reviews via fake completed bookings, one bookable
+with no availability, one pending-approval) plus two students, via a
+one-off Prisma script — the teacher-facing APIs don't expose
+`approvalStatus`/`stripeOnboardingComplete`/ratings by design, so seeding
+those needs direct DB access, same as the real manual-approval flow will.
+Verified in-browser: homepage search form and featured section render and
+link correctly; results filtering by instrument, price, and
+`availableThisWeek` all narrow correctly; empty state renders; profile
+page renders bio/credentials/reviews/availability preview correctly with
+real computed dates; the pending-approval profile shows the "not
+available" message while a nonexistent ID gets a real 404. All seeded
+data removed afterward.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
-profile CRUD, availability CRUD (all matching the README's build order
-through step 2).
+profile CRUD, availability CRUD, search/results with filtering, and the
+public teacher profile screen (README build order through step 3, plus
+the bundled-in profile screen).
 
-Not started: student dashboard (`/dashboard` is still a stub),
-search/results with filtering, the booking flow (including the
-double-booking unique index noted in §4), Stripe Connect, confirmation
-emails, reviews. Next up per the build order is search/results.
+Not started: student dashboard (`/dashboard` is still a stub), the
+booking flow (including the double-booking unique index noted in §4 and
+proper slot-splitting in `getUpcomingAvailability`), Stripe Connect,
+confirmation emails, reviews (the review *data* can already be read and
+displayed — there's just no way to create one yet, since that requires a
+completed booking). Next up per the build order is booking + time slot
+logic.
