@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDistinguishR — Style Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241A12;
+    --wood:#3B2A1D;
+    --wood-dark:#2B1F15;
+    --paper:#F6F1E4;
+    --paper-dim:#EDE6D3;
+    --brass:#C89B3C;
+    --brass-dark:#A67F2E;
+    --pine:#3F6259;
+    --pine-dark:#2E4A42;
+    --rust:#8C3B2E;
+    --line:#D8CDB0;
+    --text:#241A12;
+    --text-soft:#5C5140;
+    --white:#FFFFFF;
+    --display: 'Fraunces', serif;
+    --body: 'Inter', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--text); font-family:var(--body); line-height:1.5;}
+  .wrap{max-width:1040px; margin:0 auto; padding:0 32px;}
+  h1,h2,h3{font-family:var(--display); color:var(--ink); font-weight:600; margin:0;}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--pine); font-weight:500;}
+  code{font-family:var(--mono); font-size:12px; background:var(--paper-dim); padding:2px 6px; border-radius:2px;}
+
+  .staff{height:14px; background-image:repeating-linear-gradient(to bottom, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 3.5px); opacity:.7; margin:0 0 48px;}
+
+  header.masthead{background:var(--wood); color:var(--paper); padding:64px 0 44px;}
+  .logo{font-family:var(--display); font-size:24px; font-weight:600; display:flex; align-items:center; gap:8px;}
+  .logo .mark{color:var(--brass);}
+  header.masthead h1{color:var(--paper); font-size:44px; margin-top:22px;}
+  header.masthead p{color:#D8CDB0; font-size:15px; max-width:520px; margin-top:12px;}
+
+  section{padding:56px 0;}
+  section h2{font-size:26px; margin-bottom:6px;}
+  section > .eyebrow{margin-bottom:8px; display:block;}
+  section > p.desc{color:var(--text-soft); font-size:14px; max-width:600px; margin:10px 0 28px;}
+
+  /* color swatches */
+  .swatch-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .swatch{border:1px solid var(--line);}
+  .swatch .fill{height:96px;}
+  .swatch .meta{padding:12px 14px; background:var(--white);}
+  .swatch .meta .name{font-weight:600; font-size:13px;}
+  .swatch .meta .hex{font-family:var(--mono); font-size:12px; color:var(--text-soft); margin-top:2px;}
+  .swatch .meta .use{font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.4;}
+
+  /* type specimens */
+  .type-row{border-bottom:1px solid var(--line); padding:22px 0; display:grid; grid-template-columns:160px 1fr; gap:24px; align-items:baseline;}
+  .type-row:last-child{border-bottom:none;}
+  .type-label{font-family:var(--mono); font-size:11px; color:var(--text-soft); text-transform:uppercase; letter-spacing:.05em;}
+  .type-label .sub{display:block; font-family:var(--body); font-size:11px; text-transform:none; color:var(--text-soft); margin-top:4px; letter-spacing:0;}
+  .t-display-xl{font-family:var(--display); font-size:44px; font-weight:600; line-height:1.05;}
+  .t-display-l{font-family:var(--display); font-size:30px; font-weight:600;}
+  .t-display-m{font-family:var(--display); font-size:20px; font-weight:600;}
+  .t-body{font-family:var(--body); font-size:15px; color:var(--text);}
+  .t-soft{font-family:var(--body); font-size:13px; color:var(--text-soft);}
+  .t-mono{font-family:var(--mono); font-size:12px; color:var(--text-soft); text-transform:uppercase; letter-spacing:.08em;}
+
+  /* signature motif */
+  .motif-row{display:flex; gap:40px; align-items:center; flex-wrap:wrap;}
+  .motif-box{border:1px solid var(--line); background:var(--white); padding:24px; flex:1; min-width:260px;}
+  .motif-box .label{font-family:var(--mono); font-size:11px; color:var(--text-soft); text-transform:uppercase; margin-bottom:14px;}
+  .note-rating{font-size:15px;}
+
+  /* buttons */
+  .comp-row{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+  .btn{display:inline-block; padding:13px 26px; border-radius:2px; font-weight:600; font-size:14px; border:1px solid transparent; font-family:var(--body);}
+  .btn-primary{background:var(--rust); color:var(--paper);}
+  .btn-secondary{background:transparent; border-color:var(--ink); color:var(--ink);}
+  .btn-ghost{background:transparent; border-color:var(--line); color:var(--text-soft);}
+  .comp-caption{font-family:var(--mono); font-size:11px; color:var(--text-soft); text-transform:uppercase; margin:24px 0 8px;}
+
+  /* form fields */
+  .field-demo{max-width:320px;}
+  .field-demo label{display:block; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-soft); margin-bottom:6px;}
+  .field-demo input, .field-demo select{width:100%; padding:11px 10px; border:1px solid var(--line); background:var(--white); font-size:14px; color:var(--ink); border-radius:2px;}
+
+  /* cards */
+  .card-demo{background:var(--white); border:1px solid var(--line); max-width:280px;}
+  .card-demo .photo{aspect-ratio:4/3; background:linear-gradient(135deg,var(--pine),var(--pine-dark));}
+  .card-demo .body{padding:16px;}
+  .card-demo .name{font-family:var(--display); font-size:17px; font-weight:600;}
+  .card-demo .inst{font-size:12px; color:var(--text-soft); margin-top:2px;}
+  .card-demo .meta{display:flex; justify-content:space-between; margin-top:12px; font-size:13px;}
+  .rate{font-family:var(--mono); font-weight:500;}
+  .badge{display:inline-block; font-family:var(--mono); font-size:10px; text-transform:uppercase; background:var(--paper-dim); color:var(--pine-dark); padding:3px 7px; letter-spacing:.04em;}
+
+  /* spacing scale */
+  .space-row{display:flex; align-items:center; gap:16px; margin-bottom:10px;}
+  .space-bar{background:var(--brass); height:14px;}
+  .space-label{font-family:var(--mono); font-size:12px; color:var(--text-soft); width:120px;}
+
+  footer{padding:40px 0 70px; text-align:center; color:var(--text-soft); font-size:12px;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="logo"><span class="mark">♪</span> IDistinguishR</div>
+    <h1>Style Guide</h1>
+    <p>Visual language for the IDistinguishR platform — extracted from the approved booking-flow mockup. Use this as the single source of truth for build.</p>
+  </div>
+</header>
+
+<div class="wrap"><div class="staff"></div></div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Palette</span>
+    <h2>Color</h2>
+    <p class="desc">A warm, wood-and-parchment palette — grounded rather than generic. Brass and rust carry the accent weight; pine is reserved for confirmation and positive states.</p>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="fill" style="background:var(--wood);"></div><div class="meta"><div class="name">Wood</div><div class="hex">#3B2A1D</div><div class="use">Headers, primary chrome, dark surfaces</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--wood-dark);"></div><div class="meta"><div class="name">Wood Dark</div><div class="hex">#2B1F15</div><div class="use">Deepest surface, footers</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--paper);"></div><div class="meta"><div class="name">Paper</div><div class="hex">#F6F1E4</div><div class="use">Primary background</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--paper-dim);"></div><div class="meta"><div class="name">Paper Dim</div><div class="hex">#EDE6D3</div><div class="use">Badges, subtle fills, disabled states</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brass);"></div><div class="meta"><div class="name">Brass</div><div class="hex">#C89B3C</div><div class="use">Accent highlights, logo mark</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brass-dark);"></div><div class="meta"><div class="name">Brass Dark</div><div class="hex">#A67F2E</div><div class="use">Hover state for brass elements</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--rust);"></div><div class="meta"><div class="name">Rust</div><div class="hex">#8C3B2E</div><div class="use">Primary CTA buttons, selected date</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--pine);"></div><div class="meta"><div class="name">Pine</div><div class="hex">#3F6259</div><div class="use">Success states, photo placeholders</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--pine-dark);"></div><div class="meta"><div class="name">Pine Dark</div><div class="hex">#2E4A42</div><div class="use">Gradient partner for Pine</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--line);"></div><div class="meta"><div class="name">Line</div><div class="hex">#D8CDB0</div><div class="use">Borders, dividers, staff lines</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--ink);"></div><div class="meta"><div class="name">Ink</div><div class="hex">#241A12</div><div class="use">Primary text</div></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--text-soft);"></div><div class="meta"><div class="name">Text Soft</div><div class="hex">#5C5140</div><div class="use">Secondary / muted text</div></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="staff"></div></div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Type</span>
+    <h2>Typography</h2>
+    <p class="desc">Fraunces carries personality in headlines and names. Inter handles body copy and UI. IBM Plex Mono is used for labels, data, and system-y details — steps, prices, timestamps.</p>
+
+    <div class="type-row"><div class="type-label">Display XL<span class="sub">Fraunces 600 · 44px</span></div><div class="t-display-xl">Find a teacher who fits</div></div>
+    <div class="type-row"><div class="type-label">Display L<span class="sub">Fraunces 600 · 30px</span></div><div class="t-display-l">Marisol Feld</div></div>
+    <div class="type-row"><div class="type-label">Display M<span class="sub">Fraunces 600 · 20px</span></div><div class="t-display-m">Choose a date</div></div>
+    <div class="type-row"><div class="type-label">Body<span class="sub">Inter 400 · 15px</span></div><div class="t-body">Search real teachers by instrument, price, and availability — book a lesson in minutes.</div></div>
+    <div class="type-row"><div class="type-label">Body Soft<span class="sub">Inter 400 · 13px</span></div><div class="t-soft">Classically trained pianist with 12 years teaching beginners through advanced students.</div></div>
+    <div class="type-row"><div class="type-label">Mono / Eyebrow<span class="sub">IBM Plex Mono 500 · 11–12px</span></div><div class="t-mono">Step 4 / 8 — £38 / hour</div></div>
+  </div>
+</section>
+
+<div class="wrap"><div class="staff"></div></div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Signature</span>
+    <h2>Motifs</h2>
+    <p class="desc">Two recurring details tie the product back to the subject: staff-line dividers between sections, and a note glyph standing in for star ratings.</p>
+    <div class="motif-row">
+      <div class="motif-box">
+        <div class="label">Staff-line divider</div>
+        <div class="staff" style="margin:0;"></div>
+      </div>
+      <div class="motif-box">
+        <div class="label">Note rating (replaces stars)</div>
+        <div class="note-rating">♪ ♪ ♪ ♪ ♪ &nbsp; 4.9 <span class="t-soft">(128 reviews)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="staff"></div></div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Components</span>
+    <h2>Buttons</h2>
+    <div class="comp-caption">Primary — main CTA per screen, one per view</div>
+    <div class="comp-row"><button class="btn btn-primary">Confirm &amp; Pay</button></div>
+    <div class="comp-caption">Secondary — alternate action, outline only</div>
+    <div class="comp-row"><button class="btn btn-secondary">Add to Calendar</button></div>
+    <div class="comp-caption">Ghost — low-emphasis, inline actions (dashboard rows, table actions)</div>
+    <div class="comp-row"><button class="btn btn-ghost">Reschedule</button></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Components</span>
+    <h2>Form fields</h2>
+    <div class="field-demo">
+      <label>Instrument</label>
+      <select><option>Piano</option><option>Guitar</option></select>
+      <div style="height:14px;"></div>
+      <label>Email</label>
+      <input placeholder="jamie@email.com">
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Components</span>
+    <h2>Teacher card</h2>
+    <div class="card-demo">
+      <div class="photo"></div>
+      <div class="body">
+        <div class="name">Marisol Feld</div>
+        <div class="inst">Piano · Classical &amp; Jazz</div>
+        <div class="meta"><span class="note-rating">♪♪♪♪♪ 4.9</span><span class="rate">£38/hr</span></div>
+        <div style="margin-top:10px;"><span class="badge">Online · In person</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Layout</span>
+    <h2>Spacing scale</h2>
+    <p class="desc">Base unit 4px. Used consistently for padding, gaps, and section rhythm.</p>
+    <div class="space-row"><div class="space-label">4px · xs</div><div class="space-bar" style="width:4px;"></div></div>
+    <div class="space-row"><div class="space-label">8px · sm</div><div class="space-bar" style="width:8px;"></div></div>
+    <div class="space-row"><div class="space-label">16px · md</div><div class="space-bar" style="width:16px;"></div></div>
+    <div class="space-row"><div class="space-label">24px · lg</div><div class="space-bar" style="width:24px;"></div></div>
+    <div class="space-row"><div class="space-label">32px · xl</div><div class="space-bar" style="width:32px;"></div></div>
+    <div class="space-row"><div class="space-label">56px · 2xl</div><div class="space-bar" style="width:56px;"></div></div>
+    <div class="space-row"><div class="space-label">72px · 3xl</div><div class="space-bar" style="width:72px;"></div></div>
+  </div>
+</section>
+
+<div class="wrap"><div class="staff"></div></div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Voice</span>
+    <h2>Writing principles</h2>
+    <p class="desc" style="margin-bottom:0;">Plain, active, specific. A button says exactly what happens: <code>Confirm &amp; Pay £30.00</code>, not <code>Submit</code>. Empty states are invitations to act, not apologies. No filler, sentence case throughout.</p>
+  </div>
+</section>
+
+<footer>IDistinguishR — Style Guide · v1</footer>
+
+</body>
+</html>

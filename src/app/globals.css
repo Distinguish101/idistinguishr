@@ -1,0 +1,35 @@
+/* Design tokens — copied from idistinguishr-style-guide.html. Keep in sync. */
+:root {
+  --ink: #241a12;
+  --wood: #3b2a1d;
+  --wood-dark: #2b1f15;
+  --paper: #f6f1e4;
+  --paper-dim: #ede6d3;
+  --brass: #c89b3c;
+  --brass-dark: #a67f2e;
+  --pine: #3f6259;
+  --pine-dark: #2e4a42;
+  --rust: #8c3b2e;
+  --line: #d8cdb0;
+  --text: #241a12;
+  --text-soft: #5c5140;
+
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+/* TODO: port full component styles (buttons, cards, staff-line divider,
+   note-rating) from idistinguishr-style-guide.html into component-level
+   CSS modules as each page is built out. */

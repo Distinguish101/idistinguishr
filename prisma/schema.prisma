@@ -1,0 +1,239 @@
+// IDistinguishR — Prisma schema
+// Direct translation of /docs/data-model.md — keep these in sync.
+// UK-only MVP: no timezone field, GBP only, 48hr cancellation window.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & roles
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OAuthProvider {
+  GOOGLE
+  APPLE
+  NONE
+}
+
+model User {
+  id             String        @id @default(uuid())
+  role           Role
+  fullName       String
+  email          String        @unique
+  passwordHash   String?
+  oauthProvider  OAuthProvider @default(NONE)
+  status         UserStatus    @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+
+  teacherProfile TeacherProfile?
+  bookings       Booking[]       @relation("StudentBookings")
+  reviewsWritten Review[]        @relation("StudentReviews")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Teacher profile + Stripe Connect onboarding state
+// ---------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LessonFormat {
+  ONLINE
+  IN_PERSON
+}
+
+model TeacherProfile {
+  id                       String         @id @default(uuid())
+  userId                   String         @unique
+  user                     User           @relation(fields: [userId], references: [id])
+
+  bio                      String
+  instruments              String[]
+  hourlyRateMinorUnits      Int            // stored in pence to avoid float issues
+  formatsOffered            LessonFormat[]
+  locationText              String?
+  credentials               String
+
+  approvalStatus             ApprovalStatus @default(PENDING)
+  stripeAccountId             String?
+  stripeOnboardingComplete    Boolean        @default(false)
+
+  avgRating                  Decimal        @default(0) @db.Decimal(2, 1)
+  reviewCount                Int            @default(0)
+
+  createdAt                  DateTime       @default(now())
+
+  availabilityRules          AvailabilityRule[]
+  availabilityExceptions     AvailabilityException[]
+  bookings                   Booking[]                @relation("TeacherBookings")
+  reviewsReceived            Review[]                 @relation("TeacherReviews")
+
+  @@map("teacher_profiles")
+}
+
+// Bookable = approvalStatus == APPROVED && stripeOnboardingComplete == true
+// Enforce this check in application logic (e.g. the search query) — not a DB constraint.
+
+// ---------------------------------------------------------------------------
+// Availability
+// ---------------------------------------------------------------------------
+
+model AvailabilityRule {
+  id         String         @id @default(uuid())
+  teacherId  String
+  teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  dayOfWeek  Int            // 0 (Sun) – 6 (Sat)
+  startTime  String         // "HH:mm", UK local time (Europe/London) — MVP is UK-only
+  endTime    String
+
+  @@map("availability_rules")
+}
+
+enum ExceptionType {
+  BLOCKED
+  ADDED
+}
+
+model AvailabilityException {
+  id         String         @id @default(uuid())
+  teacherId  String
+  teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  date       DateTime       @db.Date
+  type       ExceptionType
+  startTime  String?
+  endTime    String?
+
+  @@map("availability_exceptions")
+}
+
+// ---------------------------------------------------------------------------
+// Bookings
+// ---------------------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum CancelledBy {
+  STUDENT
+  TEACHER
+  SYSTEM
+}
+
+model Booking {
+  id                       String         @id @default(uuid())
+
+  studentId                String
+  student                  User           @relation("StudentBookings", fields: [studentId], references: [id])
+
+  teacherId                String
+  teacher                  TeacherProfile @relation("TeacherBookings", fields: [teacherId], references: [id])
+
+  lessonDate               DateTime       @db.Date
+  startTime                String         // "HH:mm"
+  durationMinutes           Int
+  format                    LessonFormat
+
+  status                    BookingStatus  @default(PENDING_PAYMENT)
+  priceTotalMinorUnits       Int            // snapshot at booking time — do not recompute from teacher's current rate
+
+  cancellationWindowHours     Int            @default(48) // snapshot in case policy changes later
+  cancelledAt                 DateTime?
+  cancelledBy                 CancelledBy?
+
+  createdAt                   DateTime       @default(now())
+
+  payment                     Payment?
+  review                       Review?
+
+  // Prevent double-booking the same teacher/date/time for any non-cancelled booking.
+  // Prisma can't express a partial unique index directly — add via raw SQL migration:
+  //   CREATE UNIQUE INDEX booking_no_double_book
+  //   ON bookings (teacher_id, lesson_date, start_time)
+  //   WHERE status != 'CANCELLED';
+  @@map("bookings")
+}
+
+// ---------------------------------------------------------------------------
+// Payments (Stripe Connect — destination charges)
+// ---------------------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                              String        @id @default(uuid())
+  bookingId                       String        @unique
+  booking                         Booking       @relation(fields: [bookingId], references: [id])
+
+  amountMinorUnits                 Int           // gross amount charged to student
+  currency                          String        @default("GBP")
+
+  stripePaymentIntentId             String
+  stripeTransferId                  String?
+
+  platformFeeMinorUnits              Int
+  stripeProcessingFeeMinorUnits       Int?
+  teacherPayoutMinorUnits              Int
+
+  status                              PaymentStatus @default(PENDING)
+  promoCode                            String?
+
+  createdAt                            DateTime      @default(now())
+
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Reviews — one per completed booking only
+// ---------------------------------------------------------------------------
+
+model Review {
+  id          String         @id @default(uuid())
+
+  bookingId   String         @unique
+  booking     Booking        @relation(fields: [bookingId], references: [id])
+
+  studentId   String
+  student     User           @relation("StudentReviews", fields: [studentId], references: [id])
+
+  teacherId   String
+  teacher     TeacherProfile @relation("TeacherReviews", fields: [teacherId], references: [id])
+
+  rating      Int            // 1–5, enforce range in application logic
+  comment     String?
+
+  createdAt   DateTime       @default(now())
+
+  @@map("reviews")
+}
