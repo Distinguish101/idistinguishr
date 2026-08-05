@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { SignOutButton } from "./SignOutButton";
 
 export async function NavBar() {
@@ -23,6 +24,7 @@ export async function NavBar() {
               ) : (
                 <Link href="/dashboard">Dashboard</Link>
               )}
+              {isAdminEmail(session.user.email) && <Link href="/admin">Admin</Link>}
               <SignOutButton />
             </>
           ) : (

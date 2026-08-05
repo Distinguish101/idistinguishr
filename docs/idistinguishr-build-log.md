@@ -676,16 +676,106 @@ below).
 
 ---
 
+## 17. Admin teacher approval (US-30) + local Stripe webhook forwarding
+
+Prompted by walking through "sign up a real teacher and student, would it
+all work" — two gaps surfaced: nothing but a direct DB edit could ever
+move a teacher out of `PENDING`, and `stripeOnboardingComplete` /
+booking confirmation only ever flip via a Stripe webhook that had never
+actually been proven to reach localhost (every prior test used a
+manually-signed synthetic payload as a workaround, per earlier sections
+of this log — no Stripe CLI was even installed).
+
+**Admin approval:**
+- **`src/lib/admin.ts`** — `isAdminEmail()`, checking `session.user.email`
+  against a comma-separated `ADMIN_EMAILS` env var. Deliberately not a
+  `Role` enum value: the schema only has `STUDENT`/`TEACHER`, and half
+  the app's redirects assume "not TEACHER" means "STUDENT"
+  (`src/app/dashboard/page.tsx`, `src/app/post-auth/page.tsx`, etc.) —
+  adding `ADMIN` there would mean auditing and fixing every one of those.
+  An email allowlist sidesteps that entirely: any existing account (any
+  role) becomes admin just by its email being listed, no new signup
+  flow, no schema migration.
+- **`src/app/admin/page.tsx`** — gated the same way every other
+  role-gated page in this app is (redirect if not signed in or not
+  admin), Pending/Approved/Rejected tabs via `?status=`, one card per
+  teacher showing bio/instruments/rate/credentials plus whether Stripe
+  is connected — that last bit matters because an admin approving
+  someone who hasn't connected Stripe yet is still leaving them
+  unbookable, worth knowing at a glance.
+- **`src/app/api/admin/teachers/[id]/route.ts`** — single `PATCH`
+  accepting `{ approvalStatus: "APPROVED" | "REJECTED" }`, admin-gated
+  the same way. One route for both directions since it's one field
+  transition, not two separate operations.
+- **`src/components/NavBar.tsx`** — shows an "Admin" link for allowlisted
+  emails, independent of the Dashboard/Profile/Availability links that
+  are gated on role.
+
+**Stripe webhook forwarding:** the Stripe CLI wasn't installed at all —
+confirmed with `which stripe` before assuming anything about why
+forwarding hadn't worked. Installed via `npm i -g @stripe/cli`
+(`--allow-scripts` needed once, for the postinstall step that pulls the
+platform binary). `stripe listen` supports both the classic event stream
+(`--events` / `--forward-to`) and v2 thin events (`--thin-events` /
+`--forward-thin-to`) as separate flag pairs, both pointed at the same
+`/api/webhooks/stripe` route since that route already branches on
+payload shape. Authenticated non-interactively via `--api-key`, reading
+`STRIPE_SECRET_KEY` straight out of `.env` — no `stripe login` browser
+flow, no dependency on an interactive session. Confirmed the signing
+secret (`--print-secret`) is stable across separate `stripe listen`
+invocations for the same API key, not regenerated per run, so
+`STRIPE_WEBHOOK_SECRET` in `.env` only needed setting once. Packaged the
+exact command as **`scripts/stripe-listen.mjs`** (`npm run
+stripe:listen`) so this doesn't need re-deriving next time — it reads
+`.env` itself rather than requiring the key to be passed in some
+shell-specific way, which matters cross-platform (this project's dev
+environment mixes Git Bash and PowerShell).
+
+**Testing performed:** created a throwaway admin account (`@example.com`,
+added temporarily to `ADMIN_EMAILS`, removed after) and a throwaway
+teacher, both signed up through the real `/auth` flow. Confirmed the
+pending teacher appeared on `/admin` with correct profile details, that
+Approve moved it to the Approved tab and REJECTED teachers would move to
+Rejected, and that a non-admin session gets redirected away from `/admin`
+entirely. Then — the actual point of this stage — logged in as the
+teacher and ran the **real** hosted Stripe onboarding flow (Stripe's
+test-mode "use test phone number" / "use test account" shortcuts, no
+synthetic payloads), and watched `stripe listen`'s own log: both
+`v2.core.account[configuration.recipient].capability_status_updated`
+thin events and classic `account.updated` events arrived and were
+forwarded, each answered `200` by `/api/webhooks/stripe`. Confirmed in
+the DB that `stripeOnboardingComplete` flipped to `true` from that real
+webhook traffic — not a manually-signed one — and confirmed in the
+browser that the teacher's profile page updated to "Stripe is connected"
+and that the now-fully-bookable teacher's instrument ("Violin") appeared
+in the homepage search dropdown, which had been empty (correctly —
+`getInstrumentOptions()` only lists bookable teachers) before any teacher
+existed. `npx tsc --noEmit` clean. All test accounts, the temporary
+`ADMIN_EMAILS` addition, and scratch scripts removed afterward.
+
+**Known gaps:** `stripe listen` needs to be running
+(`npm run stripe:listen`) for Connect status updates or booking
+confirmations to land locally at all — it's a manual step, not something
+the dev server starts on its own. No auth for the admin API route beyond
+the email check (fine at this scale; would want session/CSRF hardening
+before this pattern went anywhere near production). No audit trail of
+who approved/rejected what or when.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
-the dashboard/confirmation/reviews/email stage, and the teacher dashboard
-— README build order through step 6, plus the review-creation piece of
-step 7 done early (see §15 for why), plus the teacher-side dashboard
-(§16) which the README doesn't number but which closes a real gap left
-by step 6 only covering the student side.
+the dashboard/confirmation/reviews/email stage, the teacher dashboard,
+admin teacher approval, and working local Stripe webhook forwarding —
+README build order through step 6, plus the review-creation piece of
+step 7 done early (see §15 for why), plus two things the README doesn't
+number at all: the teacher-side dashboard (§16, closing a gap step 6
+left on the student side only) and admin approval + webhook forwarding
+(§17, closing gaps found by actually trying the signup-to-bookable
+path end to end).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
@@ -693,9 +783,10 @@ everything in the README's build order — every stage through step 7 has
 at least a working vertical slice. Known rough edges are flagged
 throughout this log rather than repeated here: the double-booking index
 migration's raw SQL, `getUpcomingAvailability`'s coarser-than-booking
-interval math, Google OAuth's missing adapter schema, local Stripe CLI
-webhook delivery not working in this environment, the BST-offset
-tradeoff in cancellation-window math, and `stripeProcessingFeeMinorUnits`
+interval math, Google OAuth's missing adapter schema, the BST-offset
+tradeoff in cancellation-window math, `stripeProcessingFeeMinorUnits`
 never being populated (Stripe reports the actual processing fee
 asynchronously via a balance transaction, not on the checkout session
-itself, and nothing yet listens for that event).
+itself, and nothing yet listens for that event), and `stripe listen`
+needing to be manually running for any local Stripe webhook to land
+(§17).
