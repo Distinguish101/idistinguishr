@@ -3,6 +3,7 @@
 // Reference mockup: mockups.html → #homepage
 // Reference spec: booking-flow-spec.md → "1. Homepage"
 
+import Image from "next/image";
 import Link from "next/link";
 import { getInstrumentOptions, getFeaturedTeachers } from "@/lib/teacher-search";
 
@@ -48,8 +49,17 @@ export default async function HomePage() {
               </p>
             )}
           </div>
-          <div className="hero-art" aria-hidden="true">
-            ♪
+          <div className="hero-art">
+            <Image
+              src="https://images.unsplash.com/photo-1758524944402-1903b38f848f?fm=jpg&q=80&w=1200&auto=format&fit=crop"
+              alt="A teacher guiding a student through a guitar lesson"
+              width={800}
+              height={800}
+              priority
+            />
+            <div className="badge" aria-hidden="true">
+              ♪
+            </div>
           </div>
         </div>
       </section>

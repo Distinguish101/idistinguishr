@@ -763,19 +763,61 @@ who approved/rejected what or when.
 
 ---
 
+## 18. Homepage hero image
+
+Pure polish, prompted by the hero section being a flat wood-colored
+square with a lone music-note glyph — the only spot on the marketing
+page with no real visual interest.
+
+- **`next.config.js`** — added `images.remotePatterns` for
+  `images.unsplash.com`. Required: Next's `<Image>` refuses to optimize
+  from a host it doesn't know about, and this project has no image
+  storage of its own yet (no `photoUrl` anywhere in the schema), so an
+  external host is the only option without adding upload/storage
+  infrastructure for one hero photo.
+- **`src/app/page.tsx`** — swapped the placeholder `<div className="hero-art">♪</div>`
+  for a real photo (a guitar lesson, sourced from Unsplash, verified by
+  fetching the actual photo page rather than guessing a CDN URL), with
+  the brass note glyph kept as a small circular badge overlaid in the
+  corner rather than dropped entirely — keeps a bit of the original
+  mark/brand continuity instead of just replacing one thing with
+  another.
+- **`src/app/globals.css`** — `.hero-art` now clips/covers an `<img>`
+  (`object-fit: cover`, `overflow: hidden`) instead of centering a glyph;
+  added the `.badge` styles for the overlaid note.
+
+Scoped to the homepage hero only, not teacher cards — the "Top-rated
+this month" cards on this page and the results/profile pages pull from
+real teacher data with no `photoUrl` field, so giving them a stock photo
+would misrepresent an actual teacher's listing as having a real photo.
+That's a separate, bigger decision (schema migration + upload or URL
+field + updating every card that renders a teacher) that wasn't asked
+for here.
+
+**Testing performed:** loaded the homepage in the browser after a dev
+server restart (required — `next.config.js` changes aren't picked up by
+the same live env-reload that `.env` edits get). Confirmed the image
+renders, is sized correctly at the hero's `1/1` aspect ratio, and that
+the section below (the wood-toned "staff" divider and "How it works"
+steps) still lays out correctly with no overlap. `npx tsc --noEmit`
+clean.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
 the dashboard/confirmation/reviews/email stage, the teacher dashboard,
-admin teacher approval, and working local Stripe webhook forwarding —
-README build order through step 6, plus the review-creation piece of
-step 7 done early (see §15 for why), plus two things the README doesn't
-number at all: the teacher-side dashboard (§16, closing a gap step 6
-left on the student side only) and admin approval + webhook forwarding
-(§17, closing gaps found by actually trying the signup-to-bookable
-path end to end).
+admin teacher approval, working local Stripe webhook forwarding, and a
+homepage hero image — README build order through step 6, plus the
+review-creation piece of step 7 done early (see §15 for why), plus three
+things the README doesn't number at all: the teacher-side dashboard
+(§16, closing a gap step 6 left on the student side only), admin
+approval + webhook forwarding (§17, closing gaps found by actually
+trying the signup-to-bookable path end to end), and the hero image
+(§18, pure visual polish).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
