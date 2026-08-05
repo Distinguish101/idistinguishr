@@ -372,18 +372,146 @@ describes).
 
 ---
 
+## 14. Stripe Connect — US-25 onboarding piece, screen 6 (Payment/Checkout)
+
+Full "Express onboarding for teachers, checkout for students," per the
+README's step 5. This turned into the most research-heavy stage so
+far — the docs the project started with (`idistinguishr-stripe-connect-research.md`)
+describe the classic v1 Connect Express pattern, but Stripe's current
+best practice (surfaced via the `stripe-best-practices` skill, once it
+became available mid-session) is the newer **Accounts v2 API**
+(`/v2/core/accounts`) with a `recipient` configuration — `type: 'express'`
+is explicitly a deprecated v1 pattern now. Rebuilt the onboarding piece
+against v2 rather than follow the older research doc, and upgraded the
+`stripe` package from `^17.5.0` to `22.4.0` to get v2 API support (the
+installed 17.x had no `stripe.v2.core.accounts` at all).
+
+- **Setup**: created a real Stripe account, enabled Connect, got test-mode
+  publishable/secret keys (in `.env`). Installed the Stripe CLI via
+  `winget install Stripe.StripeCli` (confirmed with user first, per the
+  "explicit permission for downloads" rule) — `stripe.exe` wasn't on
+  winget under the obvious ID, had to `winget search stripe` to find
+  `Stripe.StripeCli`. `stripe login` is interactive (opens a browser for
+  the user to authorize) — asked the user to run it themselves via `!`.
+- **`src/lib/stripe.ts`** — Stripe client singleton (same pattern as
+  `prisma.ts`), plus `PLATFORM_FEE_PERCENT = 10` — the platform's own cut
+  via `application_fee_amount`, a business decision the research doc
+  explicitly left open, not a number from Stripe's own pricing.
+- **`src/app/api/stripe/connect/route.ts`** (`GET`) — creates a v2
+  "recipient" configuration account (`dashboard: "express"`,
+  `fees_collector`/`losses_collector: "application"` — the marketplace
+  destination-charge pattern per Stripe's platform-type guidance, not the
+  SaaS/direct-charge pattern) if the teacher doesn't have one yet, then
+  an Account Link to Stripe's hosted onboarding, and redirects there.
+  Plain GET so `<a href="/api/stripe/connect">` needs no client JS.
+- **Teacher profile page** — added a "Payouts" section: not connected →
+  "Connect payouts with Stripe" button; started but not finished →
+  "Finish Stripe onboarding"; complete → confirmation message. Also fixed
+  a latent bug this surfaced: passing the Prisma `Decimal` `avgRating`
+  field straight into the client-component `TeacherProfileForm` isn't
+  allowed by React Server Components ("Only plain objects can be passed
+  to Client Components... Decimal objects are not supported") — was
+  silently warning, not crashing, since nothing rendered that field.
+- **`src/app/api/webhooks/stripe/route.ts`** — genuinely the trickiest
+  part of this stage. Two real bugs found and fixed only by testing
+  against actual Stripe behavior, not docs alone:
+  1. Connect Accounts v2 doesn't deliver `account.updated` the classic
+     way — it fires as a **thin event** (`object: "v2.core.event"`,
+     e.g. type `v2.core.account[configuration.recipient].capability_status_updated`),
+     a lightweight pointer rather than the full resource. Confirmed via
+     Stripe's Events v2 API (`stripe.v2.core.events.list`) that these
+     events genuinely fire — the classic `account.updated` case is kept
+     as a defensive fallback, not the primary path.
+  2. `stripe.webhooks.constructEvent` **actively rejects** thin event
+     payloads — it throws "you passed an event notification... use
+     stripe.parseEventNotification instead." Found only by feeding it a
+     real payload and reading the error. The handler now peeks at the
+     unverified `object` field only to route to the correct verifier
+     (`parseEventNotification` for `v2.core.event`, `constructEvent`
+     otherwise), then verifies properly either way. Whichever notification
+     type fires, it re-fetches the account and checks
+     `configuration.recipient.capabilities.stripe_balance.stripe_transfers.status
+     === "active"` — the documented v2 way to know a connected account can
+     receive transfers (not the deprecated v1 `charges_enabled`/`payouts_enabled`).
+  3. `checkout.session.completed` (classic v1, confirms the booking +
+     writes the `Payment` row) is unchanged in shape from the original
+     design, with fee split via `application_fee_amount` +
+     `transfer_data.destination` on the Checkout Session's
+     `payment_intent_data` — a destination charge.
+- **`src/app/api/checkout/session/route.ts`** + **`src/app/checkout/page.tsx`**
+  (screen 6) — real order summary (teacher, date/time, duration, format,
+  price, 48hr cancellation policy per US-17) replacing the stub, a
+  `ConfirmPayButton` client component that POSTs to create a Checkout
+  Session then redirects to Stripe's hosted page. Payment failure (US-16)
+  needs no special handling: an abandoned/failed Stripe checkout lands
+  the student back on this same page (`cancel_url`) with the booking
+  still `PENDING_PAYMENT`, and the existing hold-expiry logic from the
+  booking stage reclaims it if never retried — no new code needed.
+  `success_url` points at `/confirmation/[bookingId]`, matching the flow
+  spec's actual sequence (Payment → Confirmation) — left as the existing
+  stub, same "wire the redirect to the next step's stub, don't build
+  that step" precedent as `/checkout` was left after the booking stage.
+
+**Known gap, found and worked around, not fixed:** local Stripe CLI
+webhook forwarding (`stripe listen --forward-to ...`) never reliably
+delivered *any* event to localhost in this environment during testing —
+not `account.updated`-family thin events (tried `--forward-thin-to`,
+`--forward-thin-connect-to`, and both together) and not even the classic
+`checkout.session.completed` (confirmed via Stripe's Events API that it
+genuinely fired, with correct metadata, but the CLI tunnel never
+delivered it). Given neither connect-flagged nor plain events came
+through, this looks like a local network/firewall interaction with the
+CLI's tunnel on this machine rather than an event-type routing mistake —
+but that's inference, not confirmed. Worked around it for testing by
+fetching the real Stripe-generated event (or, where none existed yet, a
+payload matching Stripe's documented shape exactly) and POSTing it to the
+endpoint with a properly HMAC-signed header via
+`stripe.webhooks.generateTestHeaderString`, which exercises everything
+except the CLI's delivery hop. In production this doesn't apply — Stripe
+delivers directly to a real HTTPS endpoint, no local tunnel involved.
+
+**Testing performed:** created a real Stripe test-mode teacher account,
+drove the *actual* Stripe-hosted Express onboarding UI in the browser
+(business type, personal details, "Use test account" bank details
+shortcut) through to completion — confirmed via direct API retrieve that
+`configuration.recipient.capabilities.stripe_balance.stripe_transfers.status`
+genuinely became `"active"`. Delivered a signed thin-event payload to the
+webhook endpoint and confirmed `stripeOnboardingComplete` flipped to
+`true` in the DB, and confirmed the profile page reflected it ("Stripe is
+connected"). Verified signature tampering is rejected (400) and that the
+classic-event code path still works after the routing change. Then
+booked a real lesson as a student, reached checkout, paid with Stripe's
+`4242 4242 4242 4242` test card on the actual Stripe-hosted Checkout
+page, and confirmed after webhook delivery: `Booking.status` →
+`CONFIRMED`, a `Payment` row with the correct 90/10 split (£38 total,
+£3.80 platform fee, £34.20 teacher payout), the real `PaymentIntent`'s
+`application_fee_amount` and `transfer_data.destination` matching, and a
+real `Transfer` to the connected account. Re-delivered the same webhook
+event to confirm idempotency (no duplicate `Payment` row — the
+`Payment.bookingId` unique constraint catch does its job). Verified the
+"only students can book" guard in the actual UI (not just the API) by
+attempting to book while signed in as the teacher. All seeded
+data removed afterward; Stripe test-mode objects (the connected account,
+events) left in place since they're free and harmless to leave.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
-public teacher profile screen, and booking + time slot logic including
-the double-booking/soft-hold handling (README build order through
-step 4).
+public teacher profile screen, booking + time slot logic including the
+double-booking/soft-hold handling, and Stripe Connect (Express
+onboarding + destination-charge checkout) — README build order through
+step 5.
 
-Not started: Stripe Connect (`/checkout` is a stub that now receives a
-`bookingId` but does nothing with it), student dashboard (`/dashboard` is
-still a stub), confirmation emails, reviews (the review *data* can
-already be read and displayed — there's just no way to create one yet,
-since that requires a completed booking, which requires payment). Next up
-per the build order is Stripe Connect — Express onboarding for teachers,
-checkout for students.
+Not started: student dashboard (`/dashboard` is still a stub — this is
+also where confirmation-email sending will need to be wired in, per the
+README grouping those together), confirmation page content (`/confirmation/[bookingId]`
+is a stub that now correctly receives a real `bookingId` after payment,
+same "wire the redirect, don't build the target yet" pattern used
+throughout), reviews (the review *data* can already be read and
+displayed on the public profile — there's just no way to create one yet,
+since that requires `Booking.status = COMPLETED`, which nothing sets
+yet — no lesson-completion mechanism exists). Next up per the build
+order is dashboard + confirmation emails.

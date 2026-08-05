@@ -29,6 +29,30 @@ export default async function TeacherProfilePage() {
           : "Create your profile to get started — an admin reviews it before you go live."}
       </p>
       <TeacherProfileForm initial={profile} />
+
+      {profile && (
+        <div className="card" style={{ marginTop: 24 }}>
+          <h2 className="t-display-m" style={{ marginBottom: 8 }}>
+            Payouts
+          </h2>
+          {profile.stripeOnboardingComplete ? (
+            <p style={{ color: "var(--pine)", fontSize: 14 }}>
+              Stripe is connected — you&apos;re set up to receive payouts.
+            </p>
+          ) : (
+            <>
+              <p className="t-soft" style={{ marginBottom: 16 }}>
+                {profile.stripeAccountId
+                  ? "You've started Stripe onboarding but haven't finished it yet."
+                  : "Connect a Stripe account to get paid for lessons — both this and profile approval are required before you're bookable."}
+              </p>
+              <a href="/api/stripe/connect" className="btn btn-primary">
+                {profile.stripeAccountId ? "Finish Stripe onboarding" : "Connect payouts with Stripe"}
+              </a>
+            </>
+          )}
+        </div>
+      )}
     </main>
   );
 }

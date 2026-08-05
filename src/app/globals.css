@@ -418,3 +418,18 @@ nav.topbar {
   margin: -32px -32px 24px;
   text-align: center;
 }
+
+/* Checkout order summary */
+.order-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.order-row.total {
+  font-weight: 700;
+  font-size: 15px;
+  border-bottom: none;
+  padding-top: 14px;
+}
