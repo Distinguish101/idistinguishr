@@ -27,7 +27,7 @@ export default async function DashboardPage({
   if (!session?.user) redirect("/auth");
   if (session.user.role === "TEACHER") redirect("/teacher/profile");
 
-  await completePastBookings(session.user.id);
+  await completePastBookings();
 
   const sp = await searchParams;
   const tabParam = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;

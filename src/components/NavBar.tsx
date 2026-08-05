@@ -16,6 +16,7 @@ export async function NavBar() {
             <>
               {session.user.role === "TEACHER" ? (
                 <>
+                  <Link href="/teacher/dashboard">Dashboard</Link>
                   <Link href="/teacher/profile">Profile</Link>
                   <Link href="/teacher/availability">Availability</Link>
                 </>

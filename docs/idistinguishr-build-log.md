@@ -603,14 +603,89 @@ afterward.
 
 ---
 
+## 16. Teacher dashboard — US-27 (upcoming/past lessons), US-28 (earnings/payouts)
+
+Not one of the README's numbered screens (same situation as the teacher
+profile/availability pages), but a clear functional gap: teachers had no
+way to see their own booked lessons or what they'd earned. Built as a
+mirror of the student dashboard (`src/app/dashboard/page.tsx`) rather
+than a new pattern:
+
+- **`src/app/teacher/dashboard/page.tsx`** — gated to `TEACHER` role
+  with an existing `TeacherProfile` (redirects otherwise). Same
+  Upcoming/Past tabs via `?tab=` query param as the student dashboard,
+  same `lesson-row` rendering, but scoped to `teacherId` instead of
+  `studentId`, showing the student's name instead of the teacher's, and
+  deliberately read-only — no cancel or review actions, since neither
+  user story asks for one on this side. Each row also shows the price,
+  which the student dashboard doesn't need since the student already
+  knows what they paid.
+- **Earnings card (US-28)** — "when will I be paid" doesn't need a
+  rebuilt payout UI; Stripe's Express Dashboard already has one. Built
+  as two pieces instead: (a) an in-app total, summed via
+  `prisma.payment.aggregate` on `teacherPayoutMinorUnits` for
+  `SUCCEEDED` payments joined through the teacher's bookings (`Payment`
+  has no direct `teacherId`, only `bookingId`), and (b) a "View payouts
+  in Stripe" link to a new route that generates a real Express Dashboard
+  login link, gated behind `stripeOnboardingComplete` — before that's
+  true the card shows a prompt back to the profile page instead of a
+  broken link.
+- **`src/app/api/stripe/dashboard-link/route.ts`** — new GET route:
+  auth + role check, confirms `stripeOnboardingComplete`, then calls
+  `stripe.accounts.createLoginLink(id)` and redirects there.
+  `createLoginLink` is still the classic v1-surface method — Express
+  dashboard access wasn't moved under `stripe.v2.core` the way account
+  creation was, and it works for v2-created accounts since it's keyed
+  by account ID rather than by which API created the account.
+- **`src/lib/complete-past-bookings.ts`** — this already existed for the
+  student dashboard, but was scoped to a single `studentId`. That meant
+  a teacher loading their dashboard before any student had loaded theirs
+  would see stale `CONFIRMED` status on lessons whose date had already
+  passed. Removed the scope entirely (now an unscoped table-wide
+  `updateMany` on `status: CONFIRMED, lessonDate: < today`) — both
+  dashboards call it now, whichever loads first fixes up the table for
+  both. Cheap at MVP data volumes; not worth tracking which side already
+  ran it.
+- **`src/components/NavBar.tsx`** — added a third teacher nav link
+  ("Dashboard") alongside the existing Profile/Availability links.
+
+**Testing performed:** seeded a throwaway teacher (`@example.com` email,
+cleaned up afterward) with five bookings covering every state this page
+touches — an upcoming `CONFIRMED` lesson, two past `COMPLETED` lessons
+each with a `SUCCEEDED` `Payment`, a past `CANCELLED` lesson, and a
+`CONFIRMED` lesson dated yesterday specifically to prove the now-unscoped
+`completePastBookings()` still catches it. Verified in the browser:
+logging in as the teacher and loading the dashboard correctly flipped
+the yesterday-dated booking to `COMPLETED` and moved it to the Past tab
+on first load; the Upcoming tab showed only the genuinely future lesson;
+the Past tab showed all four past bookings in descending date order with
+the cancelled one badged; the earnings total matched the sum of the two
+payouts exactly (£17.00 + £34.00 = £51.00) with the correct "from 2 paid
+lessons" count. Verified both earnings-card states: with
+`stripeOnboardingComplete: false` it showed the "connect Stripe from
+your profile" prompt with no button; flipping the field to `true` (with
+a fake `stripeAccountId`, so the actual redirect wasn't followed —
+`createLoginLink`'s correctness was already confirmed by inspecting the
+Stripe SDK's type definitions rather than by hitting the live API with a
+bogus account) made the "View payouts in Stripe" button appear as
+expected. `npx tsc --noEmit` clean. All seeded data removed afterward.
+
+**Known gaps:** none specific to this stage — it's a straightforward
+read-only view. General gaps are unchanged from earlier sections (see
+below).
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
-and the dashboard/confirmation/reviews/email stage — README build order
-through step 6, plus the review-creation piece of step 7 done early
-(see §15 for why).
+the dashboard/confirmation/reviews/email stage, and the teacher dashboard
+— README build order through step 6, plus the review-creation piece of
+step 7 done early (see §15 for why), plus the teacher-side dashboard
+(§16) which the README doesn't number but which closes a real gap left
+by step 6 only covering the student side.
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
@@ -619,5 +694,8 @@ at least a working vertical slice. Known rough edges are flagged
 throughout this log rather than repeated here: the double-booking index
 migration's raw SQL, `getUpcomingAvailability`'s coarser-than-booking
 interval math, Google OAuth's missing adapter schema, local Stripe CLI
-webhook delivery not working in this environment, and the BST-offset
-tradeoff in cancellation-window math.
+webhook delivery not working in this environment, the BST-offset
+tradeoff in cancellation-window math, and `stripeProcessingFeeMinorUnits`
+never being populated (Stripe reports the actual processing fee
+asynchronously via a balance transaction, not on the checkout session
+itself, and nothing yet listens for that event).
