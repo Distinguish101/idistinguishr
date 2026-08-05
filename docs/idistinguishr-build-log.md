@@ -496,22 +496,128 @@ events) left in place since they're free and harmless to leave.
 
 ---
 
+## 15. Dashboard + confirmation emails — screens 7 & 8, US-18 through US-24
+
+README step 6. Also finished screen 7 (Booking Confirmation) for real,
+since it's the direct landing target of the checkout success redirect
+from the previous stage and had been left as a stub on purpose until now.
+
+- **`src/lib/ics.ts`** + **`src/app/api/bookings/[id]/ics/route.ts`**
+  (US-19) — a plain `.ics` calendar file, generated on request (no
+  library — the format is simple enough not to need one) and served with
+  `Content-Disposition: attachment` behind an ownership check. Emits
+  floating local time (no `Z` suffix, no `VTIMEZONE` block) rather than a
+  timezone-correct UK time — consistent with the rest of the app, which
+  already treats stored times as literal wall-clock values everywhere
+  else per the data model doc's "no per-user timezone conversion"
+  decision, not a new inconsistency introduced here.
+- **`src/app/confirmation/[bookingId]/page.tsx`** (screen 7, US-18) —
+  real summary replacing the stub: success state, booking details,
+  Add-to-Calendar link, Go to Dashboard CTA. Three non-success states
+  handled distinctly: not found/not yours (ownership check, same pattern
+  as checkout), still `PENDING_PAYMENT` (webhook hasn't landed yet —
+  polite "finalizing" message rather than an error), and `CANCELLED`.
+  Still no side effects on load, per the original TODO comment — the
+  email send lives in the webhook, not here.
+- **`src/lib/complete-past-bookings.ts`** — a real gap worth flagging:
+  nothing in this codebase ever moves a booking from `CONFIRMED` to
+  `COMPLETED` — there's no lesson-attendance-confirmation step anywhere
+  in the user stories or data model. Since `COMPLETED` is a real enum
+  value the state-flow diagram in the data model doc expects, and US-23
+  (leave a review) explicitly requires it, this treats "the lesson's
+  calendar date has fully passed" as "the lesson happened" and flips
+  status accordingly — called at the top of the Dashboard page load, same
+  check-on-query philosophy as the booking-hold expiry rather than a cron
+  job.
+- **`src/app/api/bookings/[id]/cancel/route.ts`** (US-22) — enforces the
+  `cancellationWindowHours` cutoff server-side (the snapshotted
+  per-booking value, not a live policy lookup). The cutoff math treats
+  the stored lesson date/time as UTC directly rather than resolving the
+  actual Europe/London offset for that date, which can be off by up to an
+  hour during BST — flagged in a code comment as the same explicit
+  "no DST-edge-case handling in v1" tradeoff the data model doc already
+  makes for the whole app, not a new shortcut.
+- **`src/app/api/reviews/route.ts`** (US-23) — creates a `Review`, gated
+  on `Booking.status === COMPLETED` and one-per-booking (the `Review.bookingId`
+  unique constraint backs this up at the DB level too, not just the
+  pre-check). Recalculates `TeacherProfile.avgRating`/`reviewCount` from
+  a fresh aggregate on every new review, per the data model doc — cheap
+  at MVP review volumes, no need for an incremental running-average.
+  Whether to build review *creation* now versus treating it as step 7's
+  job was a real judgment call — the Dashboard stub's own TODO comments
+  explicitly call for the "Leave a Review" prompt as in-scope here, and a
+  dead-end button would've been worse than just building the small form,
+  so it's done now; step 7 is presumably about more than this (review
+  moderation, breakdowns, etc. — nothing concrete specified yet).
+- **`src/app/dashboard/page.tsx`** (screen 8, US-21/22/23/24) — replaces
+  the stub: Upcoming/Past tabs via a plain `?tab=` query param (no client
+  state), Upcoming shows `CONFIRMED` bookings with a two-step inline
+  Cancel (deliberately not a native `confirm()` dialog — those block
+  automated browser testing and don't match the site's styling), Past
+  shows `COMPLETED` (with the review prompt or a "Reviewed" badge) and
+  `CANCELLED` (with a badge, no actions) bookings. Empty state (US-24)
+  only shows when the student has zero bookings at all, not just an empty
+  tab — a per-tab "Nothing here yet" otherwise, to avoid over-showing the
+  big "find a teacher" CTA to someone who clearly already has.
+  "Reschedule" (mentioned in the mockup/spec) isn't built — there's no
+  modeled operation for it anywhere in the schema, and cancel-then-rebook
+  achieves the same result without inventing new scope.
+- **`src/lib/email.ts`** (US-20) — set up a real Resend account this
+  session (API key in `.env`). Sends from `onboarding@resend.dev` (no
+  domain verification done), which Resend restricts in two ways worth
+  knowing: it rejects sending to made-up domains like `@example.com`
+  outright (422 `validation_error`) and otherwise can only actually
+  deliver to the Resend account's own registered email — `delivered@resend.dev`
+  is Resend's documented always-succeeds test address, used here to prove
+  delivery genuinely works rather than just that the API call doesn't
+  error. Wired into the `checkout.session.completed` webhook case, after
+  the DB transaction commits — a failed send is caught and logged, not
+  thrown, since the payment already succeeded by that point and re-taking
+  money isn't on the table; Stripe's retry would just hit the same
+  idempotency short-circuit anyway.
+
+**Testing performed:** seeded a teacher (reusing the real Stripe-onboarded
+test account from the previous stage) and one student with six bookings
+spanning every state this stage touches — upcoming well outside the 48hr
+window, upcoming just inside it, past+completed+unreviewed,
+past+completed+already-reviewed, past+cancelled, and a `CONFIRMED`
+booking dated yesterday specifically to test the auto-complete transition.
+Confirmed in the browser: the yesterday-dated booking correctly flipped
+to `COMPLETED` and moved to the Past tab on the first Dashboard load;
+cancelling the in-window booking was correctly rejected with the exact
+policy message, cancelling the outside-window one succeeded and moved it
+to Past with a `CANCELLED` badge; submitting a review updated
+`avgRating`/`reviewCount` correctly (verified in the DB: two 5-star
+reviews → `avgRating: 5`, `reviewCount: 2`). Verified via curl with a
+second student account that viewing/cancelling/downloading the `.ics` for
+someone else's booking all correctly 404. Verified the review endpoint
+rejects a second review on the same booking (409) and reviewing a
+cancelled or still-upcoming booking (400, not `COMPLETED`). For email:
+proved the Resend integration itself works (real message ID back from
+the API), then delivered a real signed `checkout.session.completed`
+event at a booking whose student email was Resend's guaranteed-delivery
+test address, and confirmed no error was logged — the full
+webhook → confirm booking → create Payment → send email pipeline works
+end to end, not just each piece in isolation. All seeded data removed
+afterward.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
-public teacher profile screen, booking + time slot logic including the
-double-booking/soft-hold handling, and Stripe Connect (Express
-onboarding + destination-charge checkout) — README build order through
-step 5.
+public teacher profile screen, booking + time slot logic, Stripe Connect,
+and the dashboard/confirmation/reviews/email stage — README build order
+through step 6, plus the review-creation piece of step 7 done early
+(see §15 for why).
 
-Not started: student dashboard (`/dashboard` is still a stub — this is
-also where confirmation-email sending will need to be wired in, per the
-README grouping those together), confirmation page content (`/confirmation/[bookingId]`
-is a stub that now correctly receives a real `bookingId` after payment,
-same "wire the redirect, don't build the target yet" pattern used
-throughout), reviews (the review *data* can already be read and
-displayed on the public profile — there's just no way to create one yet,
-since that requires `Booking.status = COMPLETED`, which nothing sets
-yet — no lesson-completion mechanism exists). Next up per the build
-order is dashboard + confirmation emails.
+Not started: any further review-related work step 7 might still cover
+(nothing concrete specified beyond creation, which is done). That's
+everything in the README's build order — every stage through step 7 has
+at least a working vertical slice. Known rough edges are flagged
+throughout this log rather than repeated here: the double-booking index
+migration's raw SQL, `getUpcomingAvailability`'s coarser-than-booking
+interval math, Google OAuth's missing adapter schema, local Stripe CLI
+webhook delivery not working in this environment, and the BST-offset
+tradeoff in cancellation-window math.

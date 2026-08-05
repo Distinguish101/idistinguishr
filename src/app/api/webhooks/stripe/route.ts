@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { stripe, platformFeeForAmount } from "@/lib/stripe";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 // Two things this app cares about:
 //   - Connect account status changes: Accounts v2 doesn't deliver
@@ -100,7 +101,13 @@ export async function POST(req: Request) {
       const bookingId = checkoutSession.metadata?.bookingId;
       if (!bookingId) break;
 
-      const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          student: { select: { fullName: true, email: true } },
+          teacher: { include: { user: { select: { fullName: true } } } },
+        },
+      });
       if (!booking || booking.status !== "PENDING_PAYMENT") break;
 
       const amount = checkoutSession.amount_total ?? booking.priceTotalMinorUnits;
@@ -126,10 +133,24 @@ export async function POST(req: Request) {
       } catch (err) {
         // Stripe retries webhook delivery — a unique-constraint hit on
         // Payment.bookingId just means we already processed this one.
+        // Skip the email too in that case (falls through to `break`).
         if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) {
           throw err;
         }
+        break;
       }
+
+      await sendBookingConfirmationEmail({
+        to: booking.student.email,
+        studentName: booking.student.fullName,
+        teacherName: booking.teacher.user.fullName,
+        lessonDate: booking.lessonDate,
+        startTime: booking.startTime,
+        durationMinutes: booking.durationMinutes,
+        format: booking.format,
+        locationText: booking.teacher.locationText,
+        priceTotalMinorUnits: amount,
+      });
       break;
     }
 
