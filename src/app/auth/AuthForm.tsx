@@ -6,7 +6,22 @@ import { signIn, getSession } from "next-auth/react";
 
 type Mode = "signup" | "login";
 
-export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
+type BookingContext = {
+  teacherId: string;
+  teacherName: string;
+  date: string;
+  startTime: string;
+  duration: number;
+  format: "ONLINE" | "IN_PERSON";
+};
+
+export function AuthForm({
+  googleEnabled,
+  bookingContext,
+}: {
+  googleEnabled: boolean;
+  bookingContext: BookingContext | null;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signup");
   const [fullName, setFullName] = useState("");
@@ -16,10 +31,39 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // A pending booking selection only becomes a real PENDING_PAYMENT hold
+  // once we have a studentId to attach it to — that's now, right after
+  // sign-in succeeds (see src/app/api/bookings/route.ts).
   async function afterSignIn() {
     const session = await getSession();
-    const dest = session?.user?.role === "TEACHER" ? "/teacher/profile" : "/dashboard";
-    router.push(dest);
+    const role = session?.user?.role;
+
+    if (bookingContext && role === "STUDENT") {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teacherId: bookingContext.teacherId,
+          date: bookingContext.date,
+          startTime: bookingContext.startTime,
+          durationMinutes: bookingContext.duration,
+          format: bookingContext.format,
+        }),
+      });
+      if (res.ok) {
+        const { booking } = await res.json();
+        router.push(`/checkout?bookingId=${booking.id}`);
+        router.refresh();
+        return;
+      }
+      // Slot's gone (taken meanwhile, or the hold window lapsed) — send
+      // them back to pick a fresh one rather than dropping the intent.
+      router.push(`/book/${bookingContext.teacherId}`);
+      router.refresh();
+      return;
+    }
+
+    router.push(role === "TEACHER" ? "/teacher/profile" : "/dashboard");
     router.refresh();
   }
 
@@ -84,13 +128,15 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
                 minLength={2}
               />
             </div>
-            <div className="field">
-              <label>I am a...</label>
-              <select value={role} onChange={(e) => setRole(e.target.value as "STUDENT" | "TEACHER")}>
-                <option value="STUDENT">Student, looking for lessons</option>
-                <option value="TEACHER">Teacher, offering lessons</option>
-              </select>
-            </div>
+            {!bookingContext && (
+              <div className="field">
+                <label>I am a...</label>
+                <select value={role} onChange={(e) => setRole(e.target.value as "STUDENT" | "TEACHER")}>
+                  <option value="STUDENT">Student, looking for lessons</option>
+                  <option value="TEACHER">Teacher, offering lessons</option>
+                </select>
+              </div>
+            )}
           </>
         )}
 

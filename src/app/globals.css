@@ -344,3 +344,77 @@ nav.topbar {
 .mini-cal div { border: 1px solid var(--line); text-align: center; padding: 8px 0; font-size: 11px; font-family: var(--font-mono); color: var(--text-soft); }
 .mini-cal div.open { background: var(--paper-dim); color: var(--pine-dark); font-weight: 600; }
 .btn-block { display: block; width: 100%; text-align: center; }
+
+/* Select Time Slot */
+.flow-shell { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+.flow-context {
+  background: var(--wood);
+  color: var(--paper);
+  padding: 14px 20px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+.flow-context .t { font-family: var(--font-mono); font-size: 11px; color: var(--brass); }
+
+.opt-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.opt-pill {
+  border: 1px solid var(--line);
+  padding: 9px 16px;
+  font-size: 13px;
+  background: #fff;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.opt-pill.sel { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+.date-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.date-pill {
+  border: 1px solid var(--line);
+  background: #fff;
+  text-align: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.date-pill.sel { background: var(--rust); color: var(--paper); border-color: var(--rust); font-weight: 600; }
+
+.time-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.tslot {
+  border: 1px solid var(--line);
+  background: #fff;
+  text-align: center;
+  padding: 11px 0;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.tslot.sel { background: var(--pine); color: var(--paper); border-color: var(--pine); }
+
+.price-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 28px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Auth booking-context banner */
+.booking-banner {
+  background: var(--wood);
+  color: var(--paper);
+  padding: 12px 16px;
+  font-size: 13px;
+  margin: -32px -32px 24px;
+  text-align: center;
+}

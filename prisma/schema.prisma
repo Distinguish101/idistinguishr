@@ -172,11 +172,9 @@ model Booking {
   payment                     Payment?
   review                       Review?
 
-  // Prevent double-booking the same teacher/date/time for any non-cancelled booking.
-  // Prisma can't express a partial unique index directly — add via raw SQL migration:
-  //   CREATE UNIQUE INDEX booking_no_double_book
-  //   ON bookings (teacher_id, lesson_date, start_time)
-  //   WHERE status != 'CANCELLED';
+  // Prevent double-booking the same teacher/date/time for any non-cancelled
+  // booking. Prisma can't express a partial unique index directly — added
+  // via raw SQL in prisma/migrations/20260805103216_add_booking_no_double_book_index/.
   @@map("bookings")
 }
 

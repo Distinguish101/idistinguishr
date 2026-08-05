@@ -276,17 +276,114 @@ data removed afterward.
 
 ---
 
+## 13. Booking + time slot logic — US-09 through US-12, US-32, US-33
+
+The README calls this step out as the trickiest part, and it's the one
+place this session spent real effort double-checking correctness rather
+than just building forward.
+
+- **`prisma/migrations/20260805103216_add_booking_no_double_book_index/`**
+  — the partial unique index the schema comment had been flagging since
+  the initial migration: `CREATE UNIQUE INDEX ... ON bookings
+  ("teacherId", "lessonDate", "startTime") WHERE status != 'CANCELLED'`.
+  Column names had to be the actual camelCase Prisma column names, not
+  the snake_case the original comment assumed (there's no `@map` on those
+  fields) — the first migration attempt failed shadow-DB validation over
+  exactly this. This index is what makes US-32's race condition resolve
+  correctly at the DB level, not just in application logic.
+- **`src/lib/booking-slots.ts`** — new: `getBookableSlots(teacherId,
+  durationMinutes, days)`, the precise version of the availability
+  computation the profile-preview helper (`getUpcomingAvailability`)
+  deliberately wasn't. Two upgrades from that simpler version: a
+  `BLOCKED` exception now splits a window into up to two pieces around
+  itself instead of dropping the whole window, and existing bookings
+  (confirmed, completed, or still-within-hold-window pending) are
+  subtracted the same way, then what's left is chunked into
+  `durationMinutes`-sized slots. Also converts "now" to actual UK
+  wall-clock time (`Europe/London`, via `Intl.DateTimeFormat`) to drop
+  today's past slots correctly across the GMT/BST boundary, since the
+  server itself doesn't necessarily run in that timezone.
+- **`src/app/api/bookings/route.ts`** (`POST`) — creates the
+  `PENDING_PAYMENT` hold. Requires a `STUDENT` session (401/403
+  otherwise). Re-validates the requested slot against a fresh
+  `getBookableSlots` call server-side rather than trusting whatever the
+  client fetched earlier. The hold-expiry (US-33) and double-booking
+  (US-32) logic are one transaction: first `updateMany` any
+  `PENDING_PAYMENT` row at that exact teacher/date/time older than
+  `HOLD_EXPIRY_MINUTES` (10) to `CANCELLED` (`cancelledBy: SYSTEM`) —
+  this is the "check-on-query" release the data model doc calls for,
+  since there's no background job — then `create` the new booking. If a
+  genuinely active booking is already there, the `create` collides with
+  the partial unique index and throws a Prisma `P2002`, caught and turned
+  into a clean `409`.
+- **`src/app/api/teachers/[id]/slots/route.ts`** (`GET`) — thin wrapper
+  around `getBookableSlots` for the picker UI to poll when duration
+  changes.
+- **`src/app/book/[teacherId]/page.tsx` + `SlotPicker.tsx`** (screen 4)
+  — duration (30/45/60) and format selection (hidden entirely if the
+  teacher only offers one format), a date/time picker fed by the slots
+  API, and a price summary. No auth required to browse/select here —
+  per US-12's framing, the account only needs to exist once there's
+  something to attach the hold to.
+- **Auth wiring (US-12)** — `src/app/book/[teacherId]/SlotPicker.tsx`'s
+  Continue button: already signed in as a student → `POST /api/bookings`
+  directly, then `/checkout?bookingId=...`. Not signed in → `/auth` with
+  the selection in the query string. `src/app/auth/page.tsx` reads that
+  and renders a banner ("Booking Owen Blackwood — Thu 6 Aug at 15:00");
+  `AuthForm.tsx` hides the role picker when a booking is in progress
+  (defaults to `STUDENT`) and, right after a successful sign-up/login,
+  creates the hold and redirects to checkout instead of the normal
+  role-based landing page. If the slot got taken in the meantime, sends
+  them back to the booking page instead of silently dropping the intent.
+  Signed in as a `TEACHER` mid-booking (edge case, e.g. someone picks
+  "Teacher" while a booking is pending) → normal teacher redirect, intent
+  dropped — booking as a teacher isn't a real scenario.
+- **Styling** — ported the mockup's Time Select section (`.flow-shell`,
+  `.opt-pill`, date/time chips, `.price-summary`) plus a small
+  `.booking-banner` for the auth page.
+
+**Testing performed:** seeded teachers via script (teacher-facing APIs
+intentionally don't expose booking creation as anything but the real
+flow). Verified via curl: happy-path booking with correct price
+calculation; booked slots correctly excluded from the next slot-list
+fetch; a genuine race (two `curl` requests fired in parallel for the same
+slot via bash `&`/`wait`) resolved to exactly one `201` and one `409`;
+backdating a hold's `createdAt` past the 10-minute window and re-querying
+confirmed it both (a) stopped blocking the slot in the listing and (b)
+got auto-cancelled (`cancelledBy: SYSTEM`) the moment a new request came
+in for that exact slot; format mismatch (booking `IN_PERSON` with an
+online-only teacher) → `400`; a `TEACHER` session hitting the booking
+endpoint → `403`; unauthenticated → `401`. Then drove the full flow in
+the browser as a true anonymous visitor: picked a teacher/date/time on
+`/book/[teacherId]`, hit Continue, landed on `/auth` with the correct
+banner, signed up, landed on `/checkout?bookingId=...` — confirmed
+directly against the DB that the resulting booking had the right
+student, teacher, date/time, price, and `PENDING_PAYMENT` status. All
+seeded data removed afterward.
+
+**Known gap:** `/checkout` is still the untouched stub — it now receives
+a real `bookingId` query param, but doesn't do anything with it yet.
+That's intentional; actual payment is step 5 (Stripe Connect) per the
+README, not this step. A `PENDING_PAYMENT` booking with no further action
+will just sit there until `HOLD_EXPIRY_MINUTES` (10) passes and the next
+booking attempt at that slot reclaims it — there's no active cleanup job,
+by design (matches the "check-on-query" approach the data model doc
+describes).
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
-profile CRUD, availability CRUD, search/results with filtering, and the
-public teacher profile screen (README build order through step 3, plus
-the bundled-in profile screen).
+profile CRUD, availability CRUD, search/results with filtering, the
+public teacher profile screen, and booking + time slot logic including
+the double-booking/soft-hold handling (README build order through
+step 4).
 
-Not started: student dashboard (`/dashboard` is still a stub), the
-booking flow (including the double-booking unique index noted in §4 and
-proper slot-splitting in `getUpcomingAvailability`), Stripe Connect,
-confirmation emails, reviews (the review *data* can already be read and
-displayed — there's just no way to create one yet, since that requires a
-completed booking). Next up per the build order is booking + time slot
-logic.
+Not started: Stripe Connect (`/checkout` is a stub that now receives a
+`bookingId` but does nothing with it), student dashboard (`/dashboard` is
+still a stub), confirmation emails, reviews (the review *data* can
+already be read and displayed — there's just no way to create one yet,
+since that requires a completed booking, which requires payment). Next up
+per the build order is Stripe Connect — Express onboarding for teachers,
+checkout for students.
