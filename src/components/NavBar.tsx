@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
@@ -10,7 +11,7 @@ export async function NavBar() {
     <nav className="topbar">
       <div className="wrap topbar-inner">
         <Link href="/" className="logo">
-          <span className="mark">♪</span> IDistinguishR
+          <Image src="/logo.png" alt="IDistinguishR" width={110} height={32} priority />
         </Link>
         <div className="topbar-links">
           {session?.user ? (

@@ -802,6 +802,17 @@ the section below (the wood-toned "staff" divider and "How it works"
 steps) still lays out correctly with no overlap. `npx tsc --noEmit`
 clean.
 
+**Also in this pass — real logo.** The navbar's "♪ IDistinguishR" was
+plain text with a glyph standing in for a mark; swapped it for a
+provided `public/logo.png` (a brass circular note+crown icon with an
+"IDISTINGUISHR" wordmark, transparent background, 1280×371) via
+`next/image` in `src/components/NavBar.tsx`, sized to 110×32 to fit the
+navbar. No `next.config.js` change needed this time — local files under
+`public/` don't go through the remote-pattern allowlist that external
+hosts like the hero photo's Unsplash URL do. Cleaned up `.logo`'s
+now-dead text-styling CSS (font-family/size/weight/color, the
+`.logo .mark` color rule) since there's no text node to style anymore.
+
 ---
 
 ## Where things stand
