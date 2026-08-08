@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "IDistinguishR — Find your teacher",
@@ -15,8 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <NavBar />
-        {children}
+        <div className="page-shell">
+          <NavBar />
+          <div className="page-content">{children}</div>
+          <Footer />
+        </div>
       </body>
     </html>
   );

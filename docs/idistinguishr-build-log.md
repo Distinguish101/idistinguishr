@@ -884,6 +884,80 @@ create against these teachers — left as-is for now per user's call.
 
 ---
 
+## 20. Teacher photos, homepage carousel, footer/legal pages, mobile pass
+
+Four smaller pieces done together as one frontend-polish stage.
+
+**Teacher photos.** Added `TeacherProfile.photoUrl` (plain optional URL
+field, migration `20260808144151_add_teacher_photo_url`) rather than a
+file-upload pipeline — same reasoning as every other "just a URL field"
+decision in this log. Wired into every place a teacher photo renders
+(results cards, the public profile hero, the new carousel) and added a
+"Photo URL" input to the teacher profile form + `/api/teacher/profile`.
+One thing worth flagging: this field accepts *any* URL a teacher enters,
+not just Unsplash, so teacher photos render via a plain `<img>` tag
+rather than `next/image` — Next's image optimizer requires every host to
+be allow-listed up front in `next.config.js`, which doesn't work for
+"whatever URL a real teacher pastes in." The curated, fixed-URL images
+this app controls itself (the hero photo, the logo) still use
+`next/image` for the optimization benefit; only user-submitted photos
+skip it. Sourced real portrait photos (Unsplash) for the 5 seeded
+teachers as a result.
+
+**Homepage carousel.** Replaced the static 3-card "Top-rated this month"
+grid with `src/components/TeacherCarousel.tsx` — a plain flex row with
+CSS scroll-snap, not a JS library. Auto-advances every 4.5s, pauses on
+hover/touch, arrow buttons call the same `scrollBy` the auto-advance
+timer uses. Widened `getFeaturedTeachers()`'s default call from 3 to 8
+so there's actually something to scroll through.
+
+**Footer + legal pages.** Added `src/components/Footer.tsx` (Terms /
+Privacy / Contact links) wired into `layout.tsx` via a flex `.page-shell`
+so it sticks to the bottom on short pages instead of floating mid-page.
+`/terms` and `/privacy` are draft boilerplate — grounded in what the app
+actually does (48hr cancellation window, 10% platform fee, Stripe holds
+card data not us) rather than generic filler, but not lawyer-reviewed
+and using a placeholder `.example` contact address. Needs real business
+details (registered entity, jurisdiction, actual contact) before this
+is production-ready — flagged here so it doesn't quietly get treated as
+final.
+
+**Mobile pass.** Before this, zero `@media` queries existed anywhere in
+`globals.css` — nothing had been checked below desktop width all build.
+Confirmed broken on a real narrow viewport (see testing note below): the
+hero photo pushed fully off-screen by an unstacked 2-column grid, the
+homepage search card crushed to ~60px-wide fields, several 3-column
+grids cramming text. Added one `@media (max-width: 680px)` block at the
+end of `globals.css` — not a mobile-first rebuild, targeted fixes for
+the fixed-column grids that don't degrade on their own (hero, search
+card, "how it works" steps, results filters+list, teacher profile
+sidebar, lesson rows, the new carousel). Flex-based layouts with
+`flex-wrap` already in place (the booking flow's date/time pills, the
+auth card) needed no changes — confirmed fine as-is.
+
+**Testing performed:** `resize_window` doesn't actually change the
+rendered viewport in this environment (confirmed via
+`window.innerWidth` staying at desktop width after resizing) — worked
+around it by injecting a same-origin `<iframe>` at 390×844 into a blank
+tab, which gets a genuine independent viewport for media-query purposes.
+Walked the homepage, results, a teacher profile, the booking flow, and
+the auth page through that iframe both before and after the CSS
+changes — confirmed each specific breakage found before the fix, and
+confirmed it resolved after. Teacher photos verified in the browser
+across results/profile/carousel. `npx tsc --noEmit` clean throughout.
+
+**Known gaps:** the dashboards (student, teacher, admin) got the same
+defensive `@media` treatment as everything else but weren't individually
+walked through the iframe the way the public-facing pages were — lower
+priority since they're behind auth, not what a shared public link
+exposes first. `next.config.js`'s `plus.unsplash.com`/`images.unsplash.com`
+allow-listing is now only exercised by the fixed hero-photo URL, not by
+teacher photos (those moved to plain `<img>`, see above) — harmless to
+leave, but worth knowing it's not load-bearing for teacher photos
+specifically.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -891,14 +965,18 @@ profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
 the dashboard/confirmation/reviews/email stage, the teacher dashboard,
 admin teacher approval, working local Stripe webhook forwarding, a
-homepage hero image, and seeded demo teachers — README build order
-through step 6, plus the review-creation piece of step 7 done early (see
-§15 for why), plus four things the README doesn't number at all: the
-teacher-side dashboard (§16, closing a gap step 6 left on the student
-side only), admin approval + webhook forwarding (§17, closing gaps found
-by actually trying the signup-to-bookable path end to end), the hero
-image (§18, pure visual polish), and seeded demo teachers (§19, so
-there's something to actually see and book on a shared link).
+homepage hero image, seeded demo teachers, and a frontend-polish pass
+(teacher photos, homepage carousel, footer/legal pages, mobile layout
+fixes) — README build order through step 6, plus the review-creation
+piece of step 7 done early (see §15 for why), plus five things the
+README doesn't number at all: the teacher-side dashboard (§16, closing a
+gap step 6 left on the student side only), admin approval + webhook
+forwarding (§17, closing gaps found by actually trying the
+signup-to-bookable path end to end), the hero image (§18, pure visual
+polish), seeded demo teachers (§19, so there's something to actually see
+and book on a shared link), and the photos/carousel/footer/mobile pass
+(§20, closing gaps found by checking the site actually looks right —
+including on a phone, which nothing had ever confirmed until now).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's

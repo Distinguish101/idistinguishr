@@ -12,6 +12,7 @@ type Profile = {
   formatsOffered: ("ONLINE" | "IN_PERSON")[];
   locationText: string | null;
   credentials: string;
+  photoUrl: string | null;
   approvalStatus: ApprovalStatus;
 } | null;
 
@@ -32,6 +33,7 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
   const [inPerson, setInPerson] = useState(initial?.formatsOffered.includes("IN_PERSON") ?? false);
   const [locationText, setLocationText] = useState(initial?.locationText ?? "");
   const [credentials, setCredentials] = useState(initial?.credentials ?? "");
+  const [photoUrl, setPhotoUrl] = useState(initial?.photoUrl ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -67,6 +69,7 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
         formatsOffered,
         locationText: inPerson ? locationText.trim() : null,
         credentials,
+        photoUrl: photoUrl.trim() || null,
       }),
     });
     setSaving(false);
@@ -147,6 +150,16 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
           />
         </div>
       )}
+
+      <div className="field">
+        <label>Photo URL</label>
+        <input
+          type="url"
+          value={photoUrl}
+          onChange={(e) => setPhotoUrl(e.target.value)}
+          placeholder="https://... (a link to a photo of you)"
+        />
+      </div>
 
       <div className="field">
         <label>Credentials</label>

@@ -6,9 +6,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getInstrumentOptions, getFeaturedTeachers } from "@/lib/teacher-search";
+import { TeacherCarousel } from "@/components/TeacherCarousel";
 
 export default async function HomePage() {
-  const [instruments, featured] = await Promise.all([getInstrumentOptions(), getFeaturedTeachers(3)]);
+  const [instruments, featured] = await Promise.all([getInstrumentOptions(), getFeaturedTeachers(8)]);
 
   return (
     <main>
@@ -100,21 +101,16 @@ export default async function HomePage() {
                   View all →
                 </Link>
               </div>
-              <div className="card-row">
-                {featured.map((t) => (
-                  <Link key={t.id} href={`/teachers/${t.id}`} className="tcard">
-                    <div className="photo" />
-                    <div className="body">
-                      <div className="name">{t.user.fullName}</div>
-                      <div className="inst">{t.instruments.join(", ")}</div>
-                      <div className="meta">
-                        <span className="note-rating">♪♪♪♪♪ {Number(t.avgRating).toFixed(1)}</span>
-                        <span className="rate">£{(t.hourlyRateMinorUnits / 100).toFixed(0)}/hr</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <TeacherCarousel
+                teachers={featured.map((t) => ({
+                  id: t.id,
+                  fullName: t.user.fullName,
+                  instruments: t.instruments,
+                  avgRating: Number(t.avgRating),
+                  hourlyRateMinorUnits: t.hourlyRateMinorUnits,
+                  photoUrl: t.photoUrl,
+                }))}
+              />
             </div>
           </section>
         </>

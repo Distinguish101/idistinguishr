@@ -74,6 +74,7 @@ model TeacherProfile {
   formatsOffered            LessonFormat[]
   locationText              String?
   credentials               String
+  photoUrl                  String?        // plain URL field, no upload pipeline — see US-25 notes
 
   approvalStatus             ApprovalStatus @default(PENDING)
   stripeAccountId             String?

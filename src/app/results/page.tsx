@@ -176,7 +176,12 @@ export default async function ResultsPage({
               <div className="rlist">
                 {teachers.map((t) => (
                   <Link key={t.id} href={`/teachers/${t.id}`} className="rcard">
-                    <div className="photo" />
+                    <div className="photo">
+                      {t.photoUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- teacher-submitted URL, any host
+                        <img src={t.photoUrl} alt={t.user.fullName} />
+                      )}
+                    </div>
                     <div>
                       <div className="name">{t.user.fullName}</div>
                       <div className="desc">{t.bio}</div>

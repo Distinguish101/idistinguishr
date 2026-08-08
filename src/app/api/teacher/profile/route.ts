@@ -15,6 +15,7 @@ const profileSchema = z
     formatsOffered: z.array(z.enum(["ONLINE", "IN_PERSON"])).min(1, "Offer at least one format."),
     locationText: z.string().trim().max(200).nullable(),
     credentials: z.string().trim().min(10, "Add a bit more detail on your credentials.").max(2000),
+    photoUrl: z.string().trim().url("Enter a valid URL.").max(2000).nullable().optional(),
   })
   .refine((data) => !data.formatsOffered.includes("IN_PERSON") || !!data.locationText, {
     message: "Add a location for in-person lessons.",
@@ -44,7 +45,7 @@ export async function PUT(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { bio, instruments, hourlyRate, formatsOffered, locationText, credentials } = parsed.data;
+  const { bio, instruments, hourlyRate, formatsOffered, locationText, credentials, photoUrl } = parsed.data;
   const hourlyRateMinorUnits = Math.round(hourlyRate * 100);
 
   const profile = await prisma.teacherProfile.upsert({
@@ -57,6 +58,7 @@ export async function PUT(req: Request) {
       formatsOffered,
       locationText,
       credentials,
+      photoUrl,
     },
     update: {
       bio,
@@ -65,6 +67,7 @@ export async function PUT(req: Request) {
       formatsOffered,
       locationText,
       credentials,
+      photoUrl,
     },
   });
 

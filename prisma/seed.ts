@@ -24,9 +24,13 @@ type TeacherSeed = {
   formatsOffered: ("ONLINE" | "IN_PERSON")[];
   locationText: string | null;
   credentials: string;
+  photoUrl: string;
   stripeAccountId: string;
   availability: { dayOfWeek: number; startTime: string; endTime: string }[];
 };
+
+// Square headshot crop, consistent size across all card/profile renders.
+const PHOTO_PARAMS = "?w=800&h=800&fit=crop&crop=faces&auto=format&q=80";
 
 const TEACHERS: TeacherSeed[] = [
   {
@@ -38,6 +42,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["ONLINE", "IN_PERSON"],
     locationText: "Clapham, London",
     credentials: "ABRSM Diploma (DipABRSM), former ABRSM piano examiner, 15 years teaching experience.",
+    photoUrl: `https://plus.unsplash.com/premium_photo-1689551670902-19b441a6afde${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2AufGnMY2Ey8Os",
     availability: [1, 2, 3, 4, 5].map((d) => ({ dayOfWeek: d, startTime: "09:00", endTime: "17:00" })),
   },
@@ -50,6 +55,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["ONLINE"],
     locationText: null,
     credentials: "10+ years gigging and session work, BA Popular Music Performance.",
+    photoUrl: `https://images.unsplash.com/photo-1705645930353-0e335311ef20${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2Ay8GnMYAiEkST",
     availability: [1, 2, 3, 4].map((d) => ({ dayOfWeek: d, startTime: "17:00", endTime: "21:00" })),
   },
@@ -62,6 +68,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["IN_PERSON"],
     locationText: "Chorlton, Manchester",
     credentials: "Royal Northern College of Music graduate, former member of a regional youth orchestra, 8 years teaching.",
+    photoUrl: `https://images.unsplash.com/photo-1544005313-94ddf0286df2${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2B2KGnMYZOe0Vn",
     availability: [
       { dayOfWeek: 0, startTime: "10:00", endTime: "16:00" },
@@ -78,6 +85,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["ONLINE", "IN_PERSON"],
     locationText: "Clifton, Bristol",
     credentials: "West End performer (7 years), trained at a leading UK drama school.",
+    photoUrl: `https://images.unsplash.com/photo-1651684215020-f7a5b6610f23${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2B7rGnMYJAcBIK",
     availability: [1, 2, 4].map((d) => ({ dayOfWeek: d, startTime: "09:00", endTime: "17:00" })),
   },
@@ -90,6 +98,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["ONLINE", "IN_PERSON"],
     locationText: "Digbeth, Birmingham",
     credentials: "Session drummer for 9 years, taught drum workshops at local youth music programmes.",
+    photoUrl: `https://plus.unsplash.com/premium_photo-1689747698547-271d2d553cee${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2BA6GnMYbQjlpA",
     availability: [
       { dayOfWeek: 2, startTime: "18:00", endTime: "20:00" },
@@ -183,6 +192,7 @@ async function main() {
         formatsOffered: t.formatsOffered,
         locationText: t.locationText,
         credentials: t.credentials,
+        photoUrl: t.photoUrl,
         approvalStatus: "APPROVED",
         stripeAccountId: t.stripeAccountId,
         stripeOnboardingComplete: true,
@@ -195,6 +205,7 @@ async function main() {
         formatsOffered: t.formatsOffered,
         locationText: t.locationText,
         credentials: t.credentials,
+        photoUrl: t.photoUrl,
         approvalStatus: "APPROVED",
         stripeAccountId: t.stripeAccountId,
         stripeOnboardingComplete: true,

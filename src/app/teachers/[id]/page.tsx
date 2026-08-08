@@ -63,7 +63,12 @@ export default async function TeacherProfilePage({
   return (
     <main className="wrap profile-grid">
       <div>
-        <div className="p-photo" />
+        <div className="p-photo">
+          {teacher.photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- teacher-submitted URL, any host
+            <img src={teacher.photoUrl} alt={teacher.user.fullName} />
+          )}
+        </div>
         <h1 className="p-name">{teacher.user.fullName}</h1>
         <div className="p-meta">
           <span className="note-rating">
