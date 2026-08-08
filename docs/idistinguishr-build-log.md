@@ -1002,10 +1002,14 @@ added both secrets to Vercel's env vars.
 **Testing performed:** loaded the live URL and walked the homepage,
 `/results`, and `/terms` — all 200, all rendering correctly, matching
 what localhost showed. `npx tsc --noEmit` clean after the webhook route
-change. Not yet done: an actual end-to-end test-mode checkout against
-the live URL to confirm the webhook lands and a booking flips to
-CONFIRMED — planned as the next verification step once the new env vars
-are redeployed.
+change. After the user redeployed with the new secrets, ran a real
+end-to-end check against the live URL: logged in as a seeded student,
+booked a lesson with a teacher, paid with Stripe's `4242` test card
+through actual Checkout, and confirmed the booking flipped from
+PENDING_PAYMENT to CONFIRMED with a `Payment` row written — proof the
+production webhook (both the classic endpoint and the dual-secret fix)
+actually works, not just that it's configured. Deleted that test
+booking/payment afterward to keep the seeded data clean.
 
 **Known gaps:** no custom domain yet, still on the free `.vercel.app`
 subdomain — fine for sharing a test link, would need a real domain
