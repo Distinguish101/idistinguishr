@@ -815,20 +815,90 @@ now-dead text-styling CSS (font-family/size/weight/color, the
 
 ---
 
+## 19. Seeded demo teachers, for a shareable link people can actually test
+
+Prompted by wanting a URL to send to people to test as students — which
+needed real, bookable teachers to search and book, not an empty
+homepage. `package.json` already referenced `npm run db:seed` →
+`tsx prisma/seed.ts`, but that file never existed.
+
+- **Five real teacher accounts**, signed up through the actual `/auth`
+  flow (not fabricated DB rows): Maya Okonkwo (Piano, £35/hr, Online +
+  In-person London), Tomasz Nowak (Guitar, £30/hr, Online only), Priya
+  Shah (Violin, £45/hr, In-person only, Manchester), Ben Whitfield
+  (Voice, £40/hr, Online + In-person Bristol), Kofi Mensah (Drums,
+  £28/hr, Online + In-person Birmingham) — each with a real bio,
+  credentials, and weekly availability.
+- **Admin approval and Stripe onboarding done for real**, not scripted.
+  Checked first whether the v2 Accounts API supports the same
+  test-data-shortcut identity fields the classic v1 API documents
+  (`docs.stripe.com/connect/testing`) to skip the hosted UI entirely —
+  the fetched v2 create-account reference didn't show an equivalent for
+  `identity.individual` test verification, and confirming one would've
+  meant open-ended trial-and-error against the live API, so onboarding
+  was done through the same hosted flow as every earlier Stripe test in
+  this log ("Use test phone number" → "Use test account" → Agree and
+  submit).
+- **Both the dev server and the browser automation got unreliable partway
+  through.** The Next.js dev server intermittently wedged into a
+  `Jest worker encountered N child process exceptions` state (auth
+  routes 500ing, nothing else affected) — worked around each time by
+  killing the process tree, clearing `.next`, and restarting; root cause
+  not identified, no fix beyond "restart it" exists yet. Separately, and
+  apparently unrelated, the browser automation's tab itself started
+  repeatedly dropping mid-flow. Rather than keep retrying blind, handed
+  both the admin approvals and the 5 rounds of Stripe onboarding to the
+  user directly — a plain login + a few clicks each, no special access
+  needed beyond what any teacher account already has.
+- **`prisma/seed.ts`** — written after the real accounts existed, not
+  before. Captures the same profile/availability data plus each
+  teacher's real (now-onboarded) `stripeAccountId`, so re-running the
+  seed after a DB wipe restores working, bookable teachers without
+  repeating the Stripe onboarding step — that part can't be scripted,
+  but only needs doing once. Also seeds 3 throwaway students and 5 past
+  `COMPLETED` bookings with `SUCCEEDED` payments and reviews, so ratings
+  aren't all "0.0 (0)" — one teacher (Kofi) was deliberately left with
+  no reviews for variety. Idempotent: users upsert by email, profiles
+  upsert by `userId`, availability/bookings/reviews are cleared and
+  rebuilt each run.
+- **`package.json`** — added the `"prisma": { "seed": "tsx prisma/seed.ts" }`
+  block Prisma's CLI convention expects, so `npx prisma db seed` (and
+  `prisma migrate reset`'s auto-seed) work too, not just the existing
+  `npm run db:seed` alias.
+
+**Testing performed:** loaded the homepage, `/results`, and a full
+teacher profile page in the browser after seeding — confirmed the
+"no teachers live yet" homepage message is gone, the instrument dropdown
+lists all 5 instruments, "Top-rated this month" shows the 3 highest-rated
+teachers in the right order, `/results` shows all 5 with correct
+ratings/review counts/formats/prices, and a teacher profile page renders
+the real review text and availability slots matching what was configured.
+`npx tsc --noEmit` clean.
+
+**Known gaps:** the 5 Stripe test accounts and their onboarding can't be
+recreated by the seed script itself — if these specific test-mode
+accounts ever get revoked or the Stripe test environment resets, new
+ones need onboarding through the hosted flow again (same one-time cost
+as this round). No cleanup story yet for bookings/reviews real testers
+create against these teachers — left as-is for now per user's call.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
 profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
 the dashboard/confirmation/reviews/email stage, the teacher dashboard,
-admin teacher approval, working local Stripe webhook forwarding, and a
-homepage hero image — README build order through step 6, plus the
-review-creation piece of step 7 done early (see §15 for why), plus three
-things the README doesn't number at all: the teacher-side dashboard
-(§16, closing a gap step 6 left on the student side only), admin
-approval + webhook forwarding (§17, closing gaps found by actually
-trying the signup-to-bookable path end to end), and the hero image
-(§18, pure visual polish).
+admin teacher approval, working local Stripe webhook forwarding, a
+homepage hero image, and seeded demo teachers — README build order
+through step 6, plus the review-creation piece of step 7 done early (see
+§15 for why), plus four things the README doesn't number at all: the
+teacher-side dashboard (§16, closing a gap step 6 left on the student
+side only), admin approval + webhook forwarding (§17, closing gaps found
+by actually trying the signup-to-bookable path end to end), the hero
+image (§18, pure visual polish), and seeded demo teachers (§19, so
+there's something to actually see and book on a shared link).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
@@ -840,6 +910,8 @@ interval math, Google OAuth's missing adapter schema, the BST-offset
 tradeoff in cancellation-window math, `stripeProcessingFeeMinorUnits`
 never being populated (Stripe reports the actual processing fee
 asynchronously via a balance transaction, not on the checkout session
-itself, and nothing yet listens for that event), and `stripe listen`
-needing to be manually running for any local Stripe webhook to land
-(§17).
+itself, and nothing yet listens for that event), `stripe listen` needing
+to be manually running for any local Stripe webhook to land (§17), and
+this dev environment's occasional dev-server/browser instability under
+sustained automated use (§19) — no root cause found yet, only
+"restart it" as a working mitigation.
