@@ -49,8 +49,14 @@ async function syncStripeAccountStatus(accountId: string) {
 
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!signature || !secret) {
+  // stripe listen relays both event types through one local tunnel and
+  // prints a single secret, but real endpoints each get their own signing
+  // secret — a classic webhook_endpoint and a v2 event_destination are
+  // separate objects even when they point at the same URL. Falls back to
+  // STRIPE_WEBHOOK_SECRET for both when only one is set (local dev).
+  const classicSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const thinSecret = process.env.STRIPE_THIN_WEBHOOK_SECRET ?? classicSecret;
+  if (!signature || !classicSecret) {
     return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
   }
 
@@ -66,9 +72,12 @@ export async function POST(req: Request) {
   }
 
   if (isThinEvent) {
+    if (!thinSecret) {
+      return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
+    }
     let notification: Stripe.V2.Core.EventNotification;
     try {
-      notification = stripe.parseEventNotification(body, signature, secret);
+      notification = stripe.parseEventNotification(body, signature, thinSecret);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Invalid signature";
       return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
@@ -83,7 +92,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, secret);
+    event = stripe.webhooks.constructEvent(body, signature, classicSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
     return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
