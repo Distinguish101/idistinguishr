@@ -958,6 +958,63 @@ specifically.
 
 ---
 
+## 21. Deployed to Vercel — live URL at idistinguishr.vercel.app
+
+Went from "runs on localhost" to an actual shareable URL.
+
+**Build script.** Changed `package.json`'s `build` from `next build` to
+`prisma generate && next build`. `@prisma/client`'s postinstall hook
+usually generates the client automatically on Vercel, but that's not
+guaranteed across every install path — this matches Prisma's own
+documented Vercel deployment guidance rather than relying on it
+implicitly. Verified with a real local `npm run build` before pushing.
+
+**Database.** Switched `DATABASE_URL` from Neon's direct connection
+string to the pooled one (`-pooler` in the hostname) — serverless
+functions opening a fresh connection per invocation exhaust Postgres's
+connection limit fast against a direct endpoint; the pooled endpoint
+(PgBouncer under the hood) is what Neon recommends for exactly this.
+Confirmed the dev server and a DB-backed page (`/results`) both still
+worked against the new string before treating it as done.
+
+**Vercel.** Repo imported and connected to a `idistinguishr` Vercel
+project by the user (their GitHub/Vercel account, not something doable
+from here). Env vars copied over from `.env` into Vercel's dashboard.
+First deploy succeeded — confirmed by loading the live URL and checking
+the homepage hero, the new teacher carousel (real photos, real
+data from Neon), and the footer/legal links all rendered correctly,
+matching localhost.
+
+**Production Stripe webhook.** Registered two separate endpoints against
+the live URL, both pointing at `/api/webhooks/stripe`: a classic
+`webhook_endpoint` for `checkout.session.completed`/`account.updated`,
+and a v2 `event_destination` (thin events) for
+`v2.core.account.updated`/`v2.core.account[configuration.recipient].capability_status_updated`
+— mirroring exactly what `stripe listen` forwards locally. This surfaced
+a real gap: the webhook route only ever read one `STRIPE_WEBHOOK_SECRET`,
+which was fine locally because `stripe listen` relays both event types
+through one tunnel with one shared secret, but two real, separately
+created endpoint objects each get their own signing secret. Split the
+route to read `STRIPE_THIN_WEBHOOK_SECRET` for the v2 path (falling back
+to `STRIPE_WEBHOOK_SECRET` when unset, so local dev needs no change) and
+added both secrets to Vercel's env vars.
+
+**Testing performed:** loaded the live URL and walked the homepage,
+`/results`, and `/terms` — all 200, all rendering correctly, matching
+what localhost showed. `npx tsc --noEmit` clean after the webhook route
+change. Not yet done: an actual end-to-end test-mode checkout against
+the live URL to confirm the webhook lands and a booking flips to
+CONFIRMED — planned as the next verification step once the new env vars
+are redeployed.
+
+**Known gaps:** no custom domain yet, still on the free `.vercel.app`
+subdomain — fine for sharing a test link, would need a real domain
+before this goes further than that. No production email domain
+verification done for Resend either; confirmation emails from the live
+site are untested.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -965,18 +1022,20 @@ profile CRUD, availability CRUD, search/results with filtering, the
 public teacher profile screen, booking + time slot logic, Stripe Connect,
 the dashboard/confirmation/reviews/email stage, the teacher dashboard,
 admin teacher approval, working local Stripe webhook forwarding, a
-homepage hero image, seeded demo teachers, and a frontend-polish pass
+homepage hero image, seeded demo teachers, a frontend-polish pass
 (teacher photos, homepage carousel, footer/legal pages, mobile layout
-fixes) — README build order through step 6, plus the review-creation
-piece of step 7 done early (see §15 for why), plus five things the
-README doesn't number at all: the teacher-side dashboard (§16, closing a
-gap step 6 left on the student side only), admin approval + webhook
-forwarding (§17, closing gaps found by actually trying the
-signup-to-bookable path end to end), the hero image (§18, pure visual
-polish), seeded demo teachers (§19, so there's something to actually see
-and book on a shared link), and the photos/carousel/footer/mobile pass
-(§20, closing gaps found by checking the site actually looks right —
-including on a phone, which nothing had ever confirmed until now).
+fixes), and a live Vercel deployment — README build order through step 6,
+plus the review-creation piece of step 7 done early (see §15 for why),
+plus six things the README doesn't number at all: the teacher-side
+dashboard (§16, closing a gap step 6 left on the student side only),
+admin approval + webhook forwarding (§17, closing gaps found by actually
+trying the signup-to-bookable path end to end), the hero image (§18,
+pure visual polish), seeded demo teachers (§19, so there's something to
+actually see and book on a shared link), the photos/carousel/footer/
+mobile pass (§20, closing gaps found by checking the site actually looks
+right — including on a phone, which nothing had ever confirmed until
+now), and the Vercel deployment itself (§21, turning "runs on localhost"
+into an actual URL that can be shared with people to test).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
