@@ -38,7 +38,7 @@ export default async function HomePage() {
               </div>
               <div className="field">
                 <label>Location or Online</label>
-                <input name="location" placeholder="Belfast, or 'Online'" />
+                <input name="location" placeholder="Edinburgh, or 'Online'" />
               </div>
               <button type="submit" className="btn btn-primary">
                 Search

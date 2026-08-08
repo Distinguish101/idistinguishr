@@ -74,7 +74,7 @@ export default async function ResultsPage({
               </option>
             ))}
           </select>
-          <input name="location" defaultValue={location} placeholder="Belfast, or Online" />
+          <input name="location" defaultValue={location} placeholder="Edinburgh, or Online" />
           <button type="submit" className="btn btn-primary">
             Search
           </button>
