@@ -1213,6 +1213,46 @@ account to find it.
 
 ---
 
+## 25. Webhook verification-failure alerting — closing the §24 gap
+
+Directly prompted by §24's finding: the stale secret produced zero
+signal anywhere in the app, and got found only because someone happened
+to run a full manual test of the exact flow it broke.
+
+- **`src/lib/email.ts`** — new `sendWebhookVerificationFailedAlert()`,
+  same Resend-to-`ADMIN_EMAILS` pattern as `sendTeacherReviewNeededEmail`.
+  Always `console.error`s regardless of whether email config is present
+  (so it's at minimum visible in Vercel's function logs even with
+  `RESEND_API_KEY`/`ADMIN_EMAILS` unset), then emails admins with the
+  rejection reason and links to Stripe's webhooks dashboard and Vercel's
+  env var settings.
+- **`src/app/api/webhooks/stripe/route.ts`** — calls it from exactly the
+  branches that mean *our own configuration* is broken: `classicSecret`
+  missing from env, `thinSecret` missing, and both the thin
+  (`parseEventNotification`) and classic (`constructEvent`) signature
+  verification catch blocks. Deliberately **not** alerting on a missing
+  `stripe-signature` header or unparseable JSON — this is a public URL,
+  so that's ordinary internet background noise (scanners, stray bots)
+  far more often than an actual problem, and alerting on it would train
+  admins to ignore the alert.
+- No debouncing added — Stripe's own retry schedule for a failed
+  delivery is a handful of attempts over hours, not a flood, so a real
+  incident produces a few emails, not spam. Judged not worth the added
+  complexity at this app's volume.
+
+**Testing performed:** `npx tsc --noEmit` clean. Deployed, then sent a
+deliberately mis-signed request straight at the live
+`/api/webhooks/stripe` endpoint with `curl` and confirmed via Vercel's
+function logs that the `console.error` fired with the expected message
+(`"Stripe webhook verification failed (classic): ..."`) and that the
+Resend send didn't throw (no `"Failed to send webhook failure alert
+email"` in the logs) — the same shared-sender deliverability caveat as
+`sendTeacherReviewNeededEmail` applies (§23) if the admin's real inbox
+isn't the Resend account's own registered address, but the alerting
+*code path* itself is confirmed working end-to-end against production.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -1237,10 +1277,12 @@ into an actual URL that can be shared with people to test), a loading-
 states pass (§22, route-level `loading.tsx` files plus a shared spinner
 swapped into every existing async button), automated first-pass
 teacher vetting (§23, an AI review layered on top of — not replacing —
-the manual admin approval flow), and an end-to-end production test of
+the manual admin approval flow), an end-to-end production test of
 that vetting feature (§24, which also found and fixed a dead production
 Stripe webhook — a missing classic endpoint and a stale v2 signing
-secret — that had been silently 400ing every delivery).
+secret — that had been silently 400ing every delivery), and webhook
+verification-failure alerting (§25, closing the exact "silently 400ing
+with no signal" gap §24 found).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
