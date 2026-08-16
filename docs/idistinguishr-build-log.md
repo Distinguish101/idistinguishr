@@ -1019,6 +1019,44 @@ site are untested.
 
 ---
 
+## 22. Loading states — route-level spinners and in-flight button feedback
+
+Small UX-polish pass: every screen that fetches data server-side had no
+`loading.tsx`, so navigation showed a blank page until the server
+component resolved; separately, every async button in the app
+(`disabled` + a plain "Saving…"/"Cancelling…" text swap) had no visual
+spinner, just changed text.
+
+- **`src/components/Spinner.tsx`** — small inline spinner, `currentColor`
+  stroke so it matches whatever text color it's placed in without a color
+  prop; `size` controls both dimensions and stroke width. Renders a
+  visually-hidden "Loading" label when no explicit `label` is passed, so
+  screen readers get *something* even on icon-only uses.
+- **`src/components/PageLoading.tsx`** — thin wrapper around `Spinner` at
+  a larger size plus a `t-soft` message, meant for `loading.tsx` files
+  specifically (full-section loading), not in-page button state.
+- **`src/app/globals.css`** — `.spinner`/`.spinner-wrap`/`.page-loading`/
+  `.sr-only` styles backing both components.
+- **`loading.tsx` added to every route with a server component doing
+  real work**: root, `/admin`, `/auth`, `/book/[teacherId]`, `/checkout`,
+  `/confirmation/[bookingId]`, `/dashboard`, `/post-auth`, `/results`,
+  `/teacher/availability`, `/teacher/dashboard`, `/teacher/profile`,
+  `/teachers/[id]` — each just `<PageLoading label="..." />` with a
+  route-appropriate message (Next's App Router picks these up
+  automatically via its file-convention streaming boundary, no wiring
+  needed beyond the file existing).
+- **Existing async buttons** — `ApprovalButtons`, `AuthForm`,
+  `SlotPicker`, `ConfirmPayButton`, `CancelButton`, `ReviewForm`,
+  `AvailabilityManager`, `TeacherProfileForm` — swapped their loading-state
+  text for `<Spinner label="..." />`, same wording as before, now with a
+  visible spinner alongside it rather than text alone.
+
+**Testing performed:** `npx tsc --noEmit` clean. Not walked through the
+browser this pass — it's a mechanical, low-risk text-to-spinner swap plus
+standard Next.js loading-file convention, not new logic.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -1038,8 +1076,10 @@ pure visual polish), seeded demo teachers (§19, so there's something to
 actually see and book on a shared link), the photos/carousel/footer/
 mobile pass (§20, closing gaps found by checking the site actually looks
 right — including on a phone, which nothing had ever confirmed until
-now), and the Vercel deployment itself (§21, turning "runs on localhost"
-into an actual URL that can be shared with people to test).
+now), the Vercel deployment itself (§21, turning "runs on localhost"
+into an actual URL that can be shared with people to test), and a loading-
+states pass (§22, route-level `loading.tsx` files plus a shared spinner
+swapped into every existing async button).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
