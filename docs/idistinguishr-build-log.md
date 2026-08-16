@@ -1251,6 +1251,30 @@ email"` in the logs) — the same shared-sender deliverability caveat as
 isn't the Resend account's own registered address, but the alerting
 *code path* itself is confirmed working end-to-end against production.
 
+## Cleanup — closed 8 orphaned Stripe test-mode connected accounts
+
+Housekeeping after §24's testing. Cross-referenced the full list of Stripe
+v2 connected accounts (13 total) against every `teacherProfile.stripeAccountId`
+actually in the DB (5 — the real seeded demo teachers from §19: Maya,
+Tomasz, Priya, Ben, Kofi) to find the accounts with zero remaining
+reference anywhere in the app: today's `Test Teacher Vetting` account
+from §24, plus 7 more dating back to 2026-08-05 — throwaway accounts from
+earlier stages (§14's initial Stripe Connect research, §17's admin-approval
+testing) whose DB rows were already cleaned up per each stage's own
+"testing performed" notes, but whose Stripe-side objects were deliberately
+left alone at the time as harmless.
+
+Closed all 8 via `stripe.v2.core.accounts.close()` — Accounts v2 has no
+hard delete, only `close`, and closing requires passing the account's
+*actual* `applied_configurations` array back verbatim (not a guess at
+what it should be — two of the older accounts turned out to be
+`["customer", "merchant"]` only, no `recipient`, from early
+experimentation before the recipient-only pattern was settled on; get
+this wrong and the API rejects the close with a fairly generic error).
+Verified via a full re-list afterward: closed accounts drop out of the
+default listing entirely, and exactly the 5 real demo-teacher accounts
+remain, all open.
+
 ---
 
 ## Where things stand
