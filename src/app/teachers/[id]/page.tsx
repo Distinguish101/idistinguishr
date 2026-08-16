@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getUpcomingAvailability } from "@/lib/availability";
+import { ProfileTabs } from "./ProfileTabs";
 
 export default async function TeacherProfilePage({
   params,
@@ -80,35 +81,13 @@ export default async function TeacherProfilePage({
           <span>{locationLabel}</span>
         </div>
 
-        <div className="p-section">
-          <h3>About</h3>
-          <p>{teacher.bio}</p>
-        </div>
-
-        <div className="p-section">
-          <h3>Experience &amp; credentials</h3>
-          <ul className="cred-list">
-            {credentialLines.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="p-section">
-          <h3>Reviews</h3>
-          {reviews.length === 0 ? (
-            <p className="t-soft">No reviews yet.</p>
-          ) : (
-            reviews.map((r) => (
-              <div key={r.id} className="review">
-                <div className="who">
-                  {r.student.fullName} — {new Date(r.createdAt).toLocaleDateString("en-GB")}
-                </div>
-                {r.comment && <p>{r.comment}</p>}
-              </div>
-            ))
-          )}
-        </div>
+        <ProfileTabs
+          bio={teacher.bio}
+          credentialLines={credentialLines}
+          reviews={reviews}
+          reviewCount={teacher.reviewCount}
+          nextDates={nextDates}
+        />
       </div>
 
       <div className="sidebar-card">
@@ -116,25 +95,23 @@ export default async function TeacherProfilePage({
         <div className="price-lg">
           £{(teacher.hourlyRateMinorUnits / 100).toFixed(0)} <span>/ hour</span>
         </div>
-        <div className="t-soft" style={{ fontSize: 12, marginTop: 10 }}>
-          Next available
-        </div>
         {nextDates.length > 0 ? (
-          <div className="mini-cal">
-            {nextDates.map((d) => (
-              <div key={d} className="open">
-                {new Date(d).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
-                <br />
-                {new Date(d).getUTCDate()}
-              </div>
-            ))}
-          </div>
+          <p className="p-next-avail">
+            <span className="dot" />
+            Next available:{" "}
+            {new Date(nextDates[0]).toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              timeZone: "UTC",
+            })}
+          </p>
         ) : (
-          <p className="t-soft" style={{ fontSize: 13, margin: "8px 0 16px" }}>
+          <p className="t-soft" style={{ fontSize: 13, marginTop: 10 }}>
             No open slots in the next two weeks.
           </p>
         )}
-        <Link href={`/book/${teacher.id}`} className="btn btn-primary btn-block">
+        <Link href={`/book/${teacher.id}`} className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
           Select a Time
         </Link>
       </div>

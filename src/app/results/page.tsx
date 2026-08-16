@@ -16,6 +16,11 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
+}
+
 export default async function ResultsPage({
   searchParams,
 }: {
@@ -89,18 +94,18 @@ export default async function ResultsPage({
 
             <div className="filter-group">
               <h4>Format</h4>
-              <label className="filter-row">
-                <input type="checkbox" name="format" value="ONLINE" defaultChecked={formats.includes("ONLINE")} />{" "}
-                Online
+              <label className="chip-check">
+                <input type="checkbox" name="format" value="ONLINE" defaultChecked={formats.includes("ONLINE")} />
+                <span>Online</span>
               </label>
-              <label className="filter-row">
+              <label className="chip-check">
                 <input
                   type="checkbox"
                   name="format"
                   value="IN_PERSON"
                   defaultChecked={formats.includes("IN_PERSON")}
-                />{" "}
-                In person
+                />
+                <span>In person</span>
               </label>
             </div>
 
@@ -128,19 +133,29 @@ export default async function ResultsPage({
 
             <div className="filter-group">
               <h4>Rating</h4>
-              <select name="minRating" defaultValue={minRating ?? ""}>
-                <option value="">Any</option>
-                <option value="4.5">4.5 &amp; up</option>
-                <option value="4">4.0 &amp; up</option>
-                <option value="3.5">3.5 &amp; up</option>
-              </select>
+              <label className="chip-check">
+                <input type="radio" name="minRating" value="" defaultChecked={minRating == null} />
+                <span>Any</span>
+              </label>
+              <label className="chip-check">
+                <input type="radio" name="minRating" value="3.5" defaultChecked={minRating === 3.5} />
+                <span>3.5+</span>
+              </label>
+              <label className="chip-check">
+                <input type="radio" name="minRating" value="4" defaultChecked={minRating === 4} />
+                <span>4.0+</span>
+              </label>
+              <label className="chip-check">
+                <input type="radio" name="minRating" value="4.5" defaultChecked={minRating === 4.5} />
+                <span>4.5+</span>
+              </label>
             </div>
 
             <div className="filter-group">
               <h4>Availability</h4>
-              <label className="filter-row">
-                <input type="checkbox" name="availableThisWeek" value="1" defaultChecked={availableThisWeek} />{" "}
-                Available this week
+              <label className="chip-check">
+                <input type="checkbox" name="availableThisWeek" value="1" defaultChecked={availableThisWeek} />
+                <span>Available this week</span>
               </label>
             </div>
 
@@ -177,17 +192,23 @@ export default async function ResultsPage({
                 {teachers.map((t) => (
                   <Link key={t.id} href={`/teachers/${t.id}`} className="rcard">
                     <div className="photo">
-                      {t.photoUrl && (
+                      {t.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- teacher-submitted URL, any host
                         <img src={t.photoUrl} alt={t.user.fullName} />
+                      ) : (
+                        initials(t.user.fullName)
                       )}
                     </div>
                     <div>
                       <div className="name">{t.user.fullName}</div>
                       <div className="desc">{t.bio}</div>
-                      <span className="badge">
-                        {t.formatsOffered.map((f) => (f === "ONLINE" ? "Online" : "In person")).join(" · ")}
-                      </span>
+                      <div className="tag-row">
+                        {t.formatsOffered.map((f) => (
+                          <span key={f} className="badge">
+                            {f === "ONLINE" ? "Online" : "In person"}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <div className="side">
                       <div className="note-rating">
