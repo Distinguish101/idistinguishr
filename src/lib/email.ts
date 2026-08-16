@@ -8,6 +8,11 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 // students. Swap in a verified domain's address when that's set up.
 const FROM = "IDistinguishR <onboarding@resend.dev>";
 
+// No existing "site URL" env var in this app (every other link is a
+// relative next/link) — this is the one email that needs an absolute URL,
+// since it's read outside the browser.
+const SITE_URL = process.env.SITE_URL ?? "https://idistinguishr.vercel.app";
+
 export async function sendBookingConfirmationEmail(params: {
   to: string;
   studentName: string;
@@ -57,5 +62,44 @@ export async function sendBookingConfirmationEmail(params: {
     // it, re-charging nothing but re-attempting a Payment row that
     // already exists). Log and move on.
     console.error("Failed to send booking confirmation email:", err);
+  }
+}
+
+// Sent when a teacher finishes Stripe onboarding but automated vetting
+// (src/lib/vet-teacher-profile.ts) didn't approve them outright — the
+// teacher stays PENDING exactly as before that feature existed; this just
+// makes sure an admin finds out without having to check /admin on a timer.
+export async function sendTeacherReviewNeededEmail(params: {
+  teacherName: string;
+  teacherEmail: string;
+  reason: string;
+}) {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+
+  if (!resend || adminEmails.length === 0) {
+    console.warn("RESEND_API_KEY or ADMIN_EMAILS not set — skipping teacher review notification");
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: adminEmails,
+      subject: `Teacher profile needs review — ${params.teacherName}`,
+      html: `
+        <p>${params.teacherName} (${params.teacherEmail}) finished Stripe onboarding, but the automated
+        first-pass review didn't approve them outright:</p>
+        <p><em>${params.reason}</em></p>
+        <p>They're still sitting in Pending — take a look on <a href="${SITE_URL}/admin">/admin</a> when you get a chance.</p>
+      `,
+    });
+  } catch (err) {
+    // Same tradeoff as the booking-confirmation email: the profile's
+    // approval state is unaffected either way, so log and move on rather
+    // than failing whatever triggered this.
+    console.error("Failed to send teacher review notification email:", err);
   }
 }

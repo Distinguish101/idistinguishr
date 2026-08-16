@@ -3,7 +3,8 @@ import Stripe from "stripe";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { stripe, platformFeeForAmount } from "@/lib/stripe";
-import { sendBookingConfirmationEmail } from "@/lib/email";
+import { sendBookingConfirmationEmail, sendTeacherReviewNeededEmail } from "@/lib/email";
+import { vetTeacherProfile } from "@/lib/vet-teacher-profile";
 
 // Two things this app cares about:
 //   - Connect account status changes: Accounts v2 doesn't deliver
@@ -41,10 +42,44 @@ async function syncStripeAccountStatus(accountId: string) {
     include: ["configuration.recipient"],
   });
   const status = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status;
-  await prisma.teacherProfile.updateMany({
+  const stripeOnboardingComplete = status === "active";
+
+  const profile = await prisma.teacherProfile.findFirst({
     where: { stripeAccountId: accountId },
-    data: { stripeOnboardingComplete: status === "active" },
+    include: { user: { select: { fullName: true, email: true } } },
   });
+  if (!profile) return;
+
+  await prisma.teacherProfile.update({
+    where: { id: profile.id },
+    data: { stripeOnboardingComplete },
+  });
+
+  // Run the automated first-pass review (src/lib/vet-teacher-profile.ts)
+  // right as onboarding completes, only once per teacher (the "wasn't
+  // already complete" check) and only if a human hasn't already acted
+  // (still PENDING) — the manual /admin approve/reject flow is untouched
+  // and takes precedence either way.
+  if (stripeOnboardingComplete && !profile.stripeOnboardingComplete && profile.approvalStatus === "PENDING") {
+    const result = await vetTeacherProfile({
+      bio: profile.bio,
+      instruments: profile.instruments,
+      hourlyRateMinorUnits: profile.hourlyRateMinorUnits,
+      credentials: profile.credentials,
+      formatsOffered: profile.formatsOffered,
+      locationText: profile.locationText,
+    });
+
+    if (result.verdict === "approve") {
+      await prisma.teacherProfile.update({ where: { id: profile.id }, data: { approvalStatus: "APPROVED" } });
+    } else {
+      await sendTeacherReviewNeededEmail({
+        teacherName: profile.user.fullName,
+        teacherEmail: profile.user.email,
+        reason: result.reason,
+      });
+    }
+  }
 }
 
 export async function POST(req: Request) {

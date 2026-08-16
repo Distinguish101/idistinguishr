@@ -1057,6 +1057,67 @@ standard Next.js loading-file convention, not new logic.
 
 ---
 
+## 23. Automated first-pass teacher vetting (AI-assisted approval)
+
+Prompted by wanting teachers vetted even when the admin (the user themself,
+via the `ADMIN_EMAILS` allowlist from §17) isn't around to log in — the
+manual `/admin` approve/reject flow from §17 stays exactly as it was,
+untouched and still the actual authority; this adds an automated first
+pass on top of it, not instead of it.
+
+- **`src/lib/vet-teacher-profile.ts`** — new: `vetTeacherProfile()` sends
+  the teacher's bio/instruments/rate/credentials/formats to Claude
+  (`claude-opus-5` by default, overridable via `TEACHER_VETTING_MODEL`) via
+  a single `messages.parse()` call with a `json_schema` structured output
+  (`{ verdict: "approve" | "needs_review", reason }`) — a plain
+  classification call, not an agent; there's no multi-step tool use here
+  to justify one. System prompt asks it to approve only profiles that read
+  like a real, coherent teacher (non-empty bio, plausible
+  credentials-to-instrument match, sane hourly rate) and send everything
+  else — spam, gibberish, mismatched credentials, anything unsure — to
+  `needs_review`, explicitly told to prefer the cautious answer. Fails
+  closed on every error path (no `ANTHROPIC_API_KEY` set, network error,
+  response that doesn't parse against the schema): all of them return
+  `needs_review`, never a silent approve.
+- **`src/app/api/webhooks/stripe/route.ts`** — `syncStripeAccountStatus()`
+  (the same function that flips `stripeOnboardingComplete`, per §17) now
+  also runs the vetting call right when onboarding first completes — only
+  once per teacher (guarded on the flag actually flipping false→true this
+  call, not on every webhook redelivery) and only if a human hasn't
+  already acted (`approvalStatus` still `PENDING`). On `approve`, flips
+  `approvalStatus` to `APPROVED` directly, same field the manual `/admin`
+  route writes. On `needs_review` (or any vetting failure), the teacher
+  stays `PENDING` exactly as before this feature existed — the only
+  difference is `sendTeacherReviewNeededEmail()` fires so the admin finds
+  out without checking `/admin` on a timer.
+- **`src/lib/email.ts`** — new `sendTeacherReviewNeededEmail()`, same
+  Resend pattern as the existing booking-confirmation email, sent to every
+  address in `ADMIN_EMAILS` (reusing that env var from §17 rather than
+  inventing a second admin-contact list) with the teacher's name/email and
+  the model's one-sentence reason. Added a `SITE_URL` env var (defaults to
+  the live Vercel URL) since this is the one email in the app that needs
+  an absolute link — everything else links via relative `next/link`.
+- **`.env.example`** — documents `ANTHROPIC_API_KEY` (optional —
+  unset means AI vetting is skipped entirely and every profile just stays
+  `PENDING` for manual review, matching pre-this-feature behavior exactly),
+  `TEACHER_VETTING_MODEL`, and `SITE_URL`.
+
+**Known gap / deliberate choice:** no automated *rejection* — the AI path
+only ever approves or leaves `PENDING`, never sets `REJECTED`. Matches
+what was asked (vetted even when unavailable, but the human path stays
+the real safety net) rather than letting a model's false positive
+auto-reject a legitimate teacher with nobody catching it.
+
+**Testing performed:** `npx tsc --noEmit` clean. `npm run build` hit an
+`EPERM` renaming the Prisma query engine DLL — a Windows file-lock from
+this session's already-running dev server, not a code issue; not chased
+further. Not yet exercised end-to-end against a real Stripe onboarding
+completion (would need a live `ANTHROPIC_API_KEY` and a fresh test
+account) — that's the natural next verification step before relying on
+this in production.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -1077,9 +1138,11 @@ actually see and book on a shared link), the photos/carousel/footer/
 mobile pass (§20, closing gaps found by checking the site actually looks
 right — including on a phone, which nothing had ever confirmed until
 now), the Vercel deployment itself (§21, turning "runs on localhost"
-into an actual URL that can be shared with people to test), and a loading-
+into an actual URL that can be shared with people to test), a loading-
 states pass (§22, route-level `loading.tsx` files plus a shared spinner
-swapped into every existing async button).
+swapped into every existing async button), and automated first-pass
+teacher vetting (§23, an AI review layered on top of — not replacing —
+the manual admin approval flow).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
