@@ -1130,6 +1130,89 @@ covers the vetting logic itself, not its wiring into
 
 ---
 
+## 24. End-to-end test of automated teacher vetting — and a dead production webhook found in the process
+
+Signed up a real throwaway teacher through the actual `/auth` flow against
+the **live production URL** (not localhost) to watch §23's automated
+vetting fire for real, the way an actual new teacher would trigger it.
+
+- Signed up `Test Teacher Vetting`, filled in a genuinely strong profile
+  (Royal Academy of Music violin teacher, ABRSM Grade 8, DBS-checked, £32/hr)
+  designed to be an obvious `approve`.
+- Ran the real hosted Stripe Express onboarding (test-mode "Use test phone
+  number" → "Use test code" → Individual/Sole Trader → product description
+  in place of a website → "Use test account" for bank details) — no
+  synthetic payloads, the actual flow a real teacher would go through.
+- Confirmed directly via the Stripe API that
+  `configuration.recipient.capabilities.stripe_balance.stripe_transfers.status`
+  genuinely flipped to `"active"` for this account, and confirmed via the
+  v2 Events API that Stripe genuinely emitted the
+  `v2.core.account[configuration.recipient].capability_status_updated`
+  thin event for it. So Stripe's side was working — but the app's own
+  `/teacher/profile` page kept showing "You've started Stripe onboarding
+  but haven't finished it yet" no matter how long we waited.
+
+**Root cause, found by reading Vercel's production function logs
+directly:** every single delivery to `/api/webhooks/stripe` for this
+account — both the thin `v2.core.eventDestination` and, separately, the
+classic `v1` path — was returning **400** (signature verification
+failure). Digging further with the Stripe API:
+
+- The classic `webhookEndpoints.list()` call returned **zero** results —
+  the classic endpoint §21 registered for `checkout.session.completed` no
+  longer existed at all. Not found, not disabled — just gone. No record
+  of when or why; not something this session did.
+- The v2 event destination from §21 *did* still exist and was still
+  `enabled` with the right event types, but whatever
+  `STRIPE_THIN_WEBHOOK_SECRET` was stored in Vercel no longer matched the
+  destination's actual signing secret — and there's no way to ever
+  recover a lost v2 signing secret after the fact (`GET` on the
+  destination always returns `signing_secret: null`; it's write-once,
+  shown only at creation, same as classic endpoints' `secret` field).
+- Deep in Stripe's docs, learned why the earlier troubleshooting via the
+  Node SDK kept returning `null` for both `webhook_endpoint.url` and
+  `webhook_endpoint.signing_secret` even right after creation: the v2
+  Events API needs an explicit `include: ["webhook_endpoint.url",
+  "webhook_endpoint.signing_secret"]` on the create/retrieve call, or it
+  omits both fields by default. Not a bug in the SDK — a real API
+  contract most tooling around this (including a couple of throwaway
+  destinations created mid-investigation, since deleted) will trip over.
+
+**Fix:** deleted the broken v2 destination and the nonexistent-but-still-
+config'd classic one, recreated both fresh against
+`https://idistinguishr.vercel.app/api/webhooks/stripe` (classic:
+`checkout.session.completed` + `account.updated`; v2: `account.updated` +
+the capability-status thin event), captured both new secrets correctly
+this time via `include`, and replaced `STRIPE_WEBHOOK_SECRET` /
+`STRIPE_THIN_WEBHOOK_SECRET` in Vercel's production env (removed the old
+values first — Vercel's "Sensitive" env var type is also write-only, so
+there was no way to inspect what was there before overwriting it either).
+Redeployed so the new secrets took effect. Confirmed the fix by
+re-delivering a correctly-shaped, correctly-signed thin event for the
+real capability-status change directly to the endpoint (same
+generate-and-sign-manually technique §14 used for local testing,
+`stripe.webhooks.generateTestHeaderString`) — got a real `200` this time.
+
+**Confirmed the vetting feature itself worked correctly, not just the
+plumbing:** `/teacher/profile` immediately showed the `LIVE` badge and
+"Stripe is connected" with no admin ever touching `/admin`, and a direct
+DB query confirmed `approvalStatus: APPROVED`, `stripeOnboardingComplete:
+true` — exactly the verdict `vetTeacherProfile()` should reach for a
+profile this strong. Test user, profile, and scratch scripts all deleted
+afterward; the Stripe test-mode connected account was left in place
+(free and harmless, same call as §14/§19).
+
+**Known gap, now confirmed real rather than theoretical:** this app has
+no monitoring on webhook delivery health — a secret going stale (however
+that happened) produced no alert, no error anyone would see, just every
+webhook silently 400ing until someone happened to test the exact flow
+that depends on it. Worth flagging for anyone extending this: Stripe's
+dashboard does show delivery failures per-endpoint, and is the fastest
+way to notice this class of problem without needing to sign up a test
+account to find it.
+
+---
+
 ## Where things stand
 
 Done: environment, Neon + Prisma, dev server, minimal auth, teacher
@@ -1152,9 +1235,12 @@ right — including on a phone, which nothing had ever confirmed until
 now), the Vercel deployment itself (§21, turning "runs on localhost"
 into an actual URL that can be shared with people to test), a loading-
 states pass (§22, route-level `loading.tsx` files plus a shared spinner
-swapped into every existing async button), and automated first-pass
+swapped into every existing async button), automated first-pass
 teacher vetting (§23, an AI review layered on top of — not replacing —
-the manual admin approval flow).
+the manual admin approval flow), and an end-to-end production test of
+that vetting feature (§24, which also found and fixed a dead production
+Stripe webhook — a missing classic endpoint and a stale v2 signing
+secret — that had been silently 400ing every delivery).
 
 Not started: any further review-related work step 7 might still cover
 (nothing concrete specified beyond creation, which is done). That's
