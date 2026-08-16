@@ -703,7 +703,7 @@ nav.topbar {
 
   .results-search { flex-wrap: wrap; }
   .results-body { grid-template-columns: 1fr; gap: 24px; }
-  .filters { border-right: none; border-bottom: 1px solid var(--line); padding-right: 0; padding-bottom: 24px; }
+  .filters { border-right: none; border-bottom: 1px solid var(--line); padding-right: 0; padding-bottom: 24px; position: static; }
   .rcard { grid-template-columns: 90px 1fr; }
   .rcard .side { grid-column: 1 / -1; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 
