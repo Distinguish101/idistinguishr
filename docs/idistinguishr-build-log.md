@@ -1067,7 +1067,9 @@ pass on top of it, not instead of it.
 
 - **`src/lib/vet-teacher-profile.ts`** — new: `vetTeacherProfile()` sends
   the teacher's bio/instruments/rate/credentials/formats to Claude
-  (`claude-opus-5` by default, overridable via `TEACHER_VETTING_MODEL`) via
+  (`claude-haiku-4-5` by default, overridable via `TEACHER_VETTING_MODEL` —
+  Opus would be overkill for a low-stakes, high-volume classification call
+  like this one) via
   a single `messages.parse()` call with a `json_schema` structured output
   (`{ verdict: "approve" | "needs_review", reason }`) — a plain
   classification call, not an agent; there's no multi-step tool use here

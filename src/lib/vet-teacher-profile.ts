@@ -1,7 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
-const MODEL = process.env.TEACHER_VETTING_MODEL ?? "claude-opus-5";
+// Haiku, not Opus — this is a low-stakes, high-volume classification call
+// (one per teacher signup), not a task that needs frontier reasoning.
+// Override with TEACHER_VETTING_MODEL if accuracy issues ever show up.
+const MODEL = process.env.TEACHER_VETTING_MODEL ?? "claude-haiku-4-5";
 
 export type VetResult = { verdict: "approve" | "needs_review"; reason: string };
 
