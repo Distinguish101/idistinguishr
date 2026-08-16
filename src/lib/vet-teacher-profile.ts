@@ -46,8 +46,11 @@ export async function vetTeacherProfile(profile: {
     const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 1024,
+      // No `effort` here — it's rejected outright on Haiku 4.5 (the
+      // default model), unlike the Opus/Sonnet tiers where it's a real
+      // tuning knob. Structured output alone is enough for a task this
+      // small.
       output_config: {
-        effort: "low",
         format: { type: "json_schema", schema: OUTPUT_SCHEMA },
       },
       system: SYSTEM_PROMPT,
