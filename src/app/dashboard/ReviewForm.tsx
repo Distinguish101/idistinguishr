@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 export function ReviewForm({ bookingId }: { bookingId: string }) {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
       {error && <p className="field-error">{error}</p>}
       <div style={{ display: "flex", gap: 8 }}>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Submitting…" : "Submit review"}
+          {loading ? <Spinner label="Submitting…" /> : "Submit review"}
         </button>
         <button type="button" className="ghost-btn" onClick={() => setOpen(false)} disabled={loading}>
           Cancel

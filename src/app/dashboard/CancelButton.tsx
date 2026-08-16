@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 export function CancelButton({ bookingId }: { bookingId: string }) {
   const router = useRouter();
@@ -28,7 +29,7 @@ export function CancelButton({ bookingId }: { bookingId: string }) {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button type="button" className="ghost-btn" onClick={handleCancel} disabled={loading}>
-          {loading ? "Cancelling…" : "Yes, cancel"}
+          {loading ? <Spinner label="Cancelling…" /> : "Yes, cancel"}
         </button>
         <button type="button" className="ghost-btn" onClick={() => setConfirming(false)} disabled={loading}>
           Never mind

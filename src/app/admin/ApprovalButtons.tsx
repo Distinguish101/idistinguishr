@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 export function ApprovalButtons({ teacherId }: { teacherId: string }) {
   const router = useRouter();
@@ -35,7 +36,7 @@ export function ApprovalButtons({ teacherId }: { teacherId: string }) {
           onClick={() => decide("APPROVED")}
           disabled={loading !== null}
         >
-          {loading === "APPROVED" ? "Approving…" : "Approve"}
+          {loading === "APPROVED" ? <Spinner label="Approving…" /> : "Approve"}
         </button>
         <button
           type="button"
@@ -43,7 +44,7 @@ export function ApprovalButtons({ teacherId }: { teacherId: string }) {
           onClick={() => decide("REJECTED")}
           disabled={loading !== null}
         >
-          {loading === "REJECTED" ? "Rejecting…" : "Reject"}
+          {loading === "REJECTED" ? <Spinner label="Rejecting…" /> : "Reject"}
         </button>
       </div>
       {error && (

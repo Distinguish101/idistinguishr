@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 type Slot = { date: string; startTime: string; endTime: string };
 type Format = "ONLINE" | "IN_PERSON";
@@ -132,7 +133,9 @@ export function SlotPicker({
 
       <div style={{ marginTop: 28 }}>
         {loadingSlots ? (
-          <p className="t-soft">Loading availability…</p>
+          <p className="t-soft">
+            <Spinner label="Loading availability…" />
+          </p>
         ) : dates.length === 0 ? (
           <p className="t-soft">No open slots in the next two weeks — check back soon or try another teacher.</p>
         ) : (
@@ -204,7 +207,7 @@ export function SlotPicker({
         disabled={!selectedDate || !selectedTime || submitting}
         onClick={handleContinue}
       >
-        {submitting ? "Holding your slot…" : "Continue"}
+        {submitting ? <Spinner label="Holding your slot…" /> : "Continue"}
       </button>
     </div>
   );

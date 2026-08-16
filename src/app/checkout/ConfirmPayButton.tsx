@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Spinner } from "@/components/Spinner";
 
 export function ConfirmPayButton({ bookingId }: { bookingId: string }) {
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export function ConfirmPayButton({ bookingId }: { bookingId: string }) {
         </p>
       )}
       <button type="button" className="btn btn-primary btn-block" onClick={handleClick} disabled={loading}>
-        {loading ? "Redirecting to payment…" : "Confirm & Pay"}
+        {loading ? <Spinner label="Redirecting to payment…" /> : "Confirm & Pay"}
       </button>
     </>
   );

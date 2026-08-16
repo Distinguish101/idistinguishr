@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
+import { Spinner } from "@/components/Spinner";
 
 type Mode = "signup" | "login";
 
@@ -164,7 +165,7 @@ export function AuthForm({
         {error && <p className="field-error">{error}</p>}
 
         <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={loading}>
-          {loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
+          {loading ? <Spinner label="Please wait…" /> : mode === "signup" ? "Create account" : "Log in"}
         </button>
       </form>
 

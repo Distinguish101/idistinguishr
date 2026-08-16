@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -177,7 +178,7 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       {saved && <p style={{ color: "var(--pine)", fontSize: 13 }}>Saved.</p>}
 
       <button type="submit" className="btn btn-primary" disabled={saving}>
-        {saving ? "Saving…" : initial ? "Save changes" : "Create profile"}
+        {saving ? <Spinner label="Saving…" /> : initial ? "Save changes" : "Create profile"}
       </button>
     </form>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Spinner } from "@/components/Spinner";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -145,7 +146,7 @@ export function AvailabilityManager({
             <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </div>
           <button type="submit" className="btn btn-secondary" disabled={addingRule}>
-            Add hours
+            {addingRule ? <Spinner label="Adding…" /> : "Add hours"}
           </button>
         </form>
       </section>
@@ -203,7 +204,7 @@ export function AvailabilityManager({
             </>
           )}
           <button type="submit" className="btn btn-secondary" disabled={addingExc}>
-            Add exception
+            {addingExc ? <Spinner label="Adding…" /> : "Add exception"}
           </button>
         </form>
       </section>
