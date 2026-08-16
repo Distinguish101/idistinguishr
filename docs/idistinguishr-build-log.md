@@ -1110,13 +1110,23 @@ what was asked (vetted even when unavailable, but the human path stays
 the real safety net) rather than letting a model's false positive
 auto-reject a legitimate teacher with nobody catching it.
 
-**Testing performed:** `npx tsc --noEmit` clean. `npm run build` hit an
-`EPERM` renaming the Prisma query engine DLL — a Windows file-lock from
-this session's already-running dev server, not a code issue; not chased
-further. Not yet exercised end-to-end against a real Stripe onboarding
-completion (would need a live `ANTHROPIC_API_KEY` and a fresh test
-account) — that's the natural next verification step before relying on
-this in production.
+**Testing performed:** `npx tsc --noEmit` clean throughout. Once a real
+`ANTHROPIC_API_KEY` was available, smoke-tested `vetTeacherProfile()`
+directly (via `tsx`, outside the webhook) against two profiles — a
+detailed, credentialed piano teacher and a one-line spam/placeholder bio
+with a £0.01 rate — and got `approve` and `needs_review` respectively,
+with sensible one-sentence reasons for both. That run caught a real bug:
+Haiku 4.5 (the default model) rejects `output_config.effort` with a
+400 — Opus/Sonnet accept it, Haiku doesn't — so the call was silently
+falling back to `needs_review` on *every* profile via the catch-all error
+handler, not just the ones that should. Fixed by dropping `effort`
+entirely (structured output alone is enough for a task this small);
+re-ran the same two-profile test and got the correct verdicts. Key is now
+set in both local `.env` and Vercel's Production + Preview environments.
+Not yet exercised through the actual Stripe webhook end-to-end (would
+need a fresh real onboarding completion) — the direct-call test above
+covers the vetting logic itself, not its wiring into
+`syncStripeAccountStatus()`.
 
 ---
 
