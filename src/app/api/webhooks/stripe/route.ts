@@ -3,7 +3,11 @@ import Stripe from "stripe";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { stripe, platformFeeForAmount } from "@/lib/stripe";
-import { sendBookingConfirmationEmail, sendTeacherReviewNeededEmail } from "@/lib/email";
+import {
+  sendBookingConfirmationEmail,
+  sendTeacherReviewNeededEmail,
+  sendWebhookVerificationFailedAlert,
+} from "@/lib/email";
 import { vetTeacherProfile } from "@/lib/vet-teacher-profile";
 
 // Two things this app cares about:
@@ -91,7 +95,16 @@ export async function POST(req: Request) {
   // STRIPE_WEBHOOK_SECRET for both when only one is set (local dev).
   const classicSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const thinSecret = process.env.STRIPE_THIN_WEBHOOK_SECRET ?? classicSecret;
-  if (!signature || !classicSecret) {
+  if (!classicSecret) {
+    // Real misconfiguration (env var deleted/unset), not just a request
+    // missing a header — worth paging someone about.
+    await sendWebhookVerificationFailedAlert({ path: "config", reason: "STRIPE_WEBHOOK_SECRET is not set" });
+    return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
+  }
+  if (!signature) {
+    // No stripe-signature header at all — this is a public URL, so this
+    // is ordinary internet noise (scanners, stray bots) far more often
+    // than a real problem. Not alert-worthy.
     return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
   }
 
@@ -108,6 +121,7 @@ export async function POST(req: Request) {
 
   if (isThinEvent) {
     if (!thinSecret) {
+      await sendWebhookVerificationFailedAlert({ path: "config", reason: "STRIPE_THIN_WEBHOOK_SECRET is not set" });
       return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
     }
     let notification: Stripe.V2.Core.EventNotification;
@@ -115,6 +129,11 @@ export async function POST(req: Request) {
       notification = stripe.parseEventNotification(body, signature, thinSecret);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Invalid signature";
+      // This exact branch is what let a stale STRIPE_THIN_WEBHOOK_SECRET
+      // go unnoticed for over a week — see build log §24. A real
+      // stripe-signature header arrived and still didn't verify, so this
+      // is a config problem, not request noise.
+      await sendWebhookVerificationFailedAlert({ path: "thin", reason: message });
       return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
     }
 
@@ -130,6 +149,7 @@ export async function POST(req: Request) {
     event = stripe.webhooks.constructEvent(body, signature, classicSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
+    await sendWebhookVerificationFailedAlert({ path: "classic", reason: message });
     return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
   }
 

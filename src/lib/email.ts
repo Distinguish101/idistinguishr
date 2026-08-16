@@ -103,3 +103,55 @@ export async function sendTeacherReviewNeededEmail(params: {
     console.error("Failed to send teacher review notification email:", err);
   }
 }
+
+// Sent when the Stripe webhook route rejects a delivery for a reason that
+// means our end is misconfigured, not that the request itself was junk —
+// a missing secret env var, or a signature that didn't verify. This is
+// exactly the failure mode that let a stale STRIPE_THIN_WEBHOOK_SECRET go
+// unnoticed for over a week (see build log §24): every real Stripe
+// delivery 400'd, and nothing surfaced that anywhere. Deliberately NOT
+// sent for a missing stripe-signature header or unparseable JSON — this
+// endpoint is a public URL, so that's ordinary internet background noise
+// (scanners, stray bots), not a signal anything's actually broken.
+export async function sendWebhookVerificationFailedAlert(params: {
+  path: "classic" | "thin" | "config";
+  reason: string;
+}) {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+
+  console.error(`Stripe webhook verification failed (${params.path}):`, params.reason);
+
+  if (!resend || adminEmails.length === 0) {
+    console.warn("RESEND_API_KEY or ADMIN_EMAILS not set — skipping webhook failure alert");
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: adminEmails,
+      subject: "Stripe webhook is failing to verify",
+      html: `
+        <p>A Stripe webhook delivery to <code>/api/webhooks/stripe</code> (${params.path} path)
+        was rejected: <em>${params.reason}</em></p>
+        <p>This usually means <code>STRIPE_WEBHOOK_SECRET</code> or
+        <code>STRIPE_THIN_WEBHOOK_SECRET</code> in Vercel's env vars no longer matches the
+        signing secret on the actual Stripe endpoint/event destination — booking confirmations,
+        Stripe Connect status syncing, and automated teacher vetting all silently stop working
+        when this happens. Check <a href="https://dashboard.stripe.com/webhooks">Stripe's
+        webhooks dashboard</a> for delivery failures, and compare against what's in
+        <a href="https://vercel.com/idistinguish/idistinguishr/settings/environment-variables">Vercel's
+        project env vars</a>.</p>
+        <p>Repeat deliveries of the same failed event will trigger this email again — Stripe
+        retries a failed webhook several times, so don't be alarmed by more than one.</p>
+      `,
+    });
+  } catch (err) {
+    // If Resend itself is down there's nothing more to do here — the
+    // console.error above is the fallback signal.
+    console.error("Failed to send webhook failure alert email:", err);
+  }
+}
