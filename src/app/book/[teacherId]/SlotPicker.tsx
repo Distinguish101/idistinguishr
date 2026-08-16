@@ -8,6 +8,15 @@ type Slot = { date: string; startTime: string; endTime: string };
 type Format = "ONLINE" | "IN_PERSON";
 
 const DURATIONS = [30, 45, 60] as const;
+const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Dates throughout this app are literal "YYYY-MM-DD" wall-clock strings
+// (see data model doc's "no per-user timezone conversion" decision) — all
+// the calendar math below stays in UTC to match that, the same way the
+// existing date-formatting calls already pass timeZone: "UTC".
+function dateKey(year: number, month: number, day: number) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 export function SlotPicker({
   teacherId,
@@ -35,6 +44,11 @@ export function SlotPicker({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const now = new Date();
+  const todayKey = dateKey(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const [viewYear, setViewYear] = useState(now.getUTCFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getUTCMonth());
+
   useEffect(() => {
     setLoadingSlots(true);
     setSelectedDate(null);
@@ -45,7 +59,7 @@ export function SlotPicker({
       .finally(() => setLoadingSlots(false));
   }, [teacherId, duration]);
 
-  const dates = Array.from(new Set(slots.map((s) => s.date)));
+  const dates = new Set(slots.map((s) => s.date));
   const timesForDate = selectedDate ? slots.filter((s) => s.date === selectedDate) : [];
   const price = (hourlyRateMinorUnits * duration) / 100 / 60;
 
@@ -54,6 +68,21 @@ export function SlotPicker({
       .then((res) => res.json())
       .then((data) => setSlots(data.slots ?? []));
   }
+
+  function changeMonth(delta: number) {
+    const next = new Date(Date.UTC(viewYear, viewMonth + delta, 1));
+    setViewYear(next.getUTCFullYear());
+    setViewMonth(next.getUTCMonth());
+  }
+
+  const atCurrentMonth = viewYear === now.getUTCFullYear() && viewMonth === now.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+  const firstWeekday = (new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay() + 6) % 7; // 0 = Monday
+  const monthLabel = new Date(Date.UTC(viewYear, viewMonth, 1)).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   async function handleContinue() {
     if (!selectedDate || !selectedTime) return;
@@ -131,84 +160,128 @@ export function SlotPicker({
         </p>
       )}
 
-      <div style={{ marginTop: 28 }}>
-        {loadingSlots ? (
-          <p className="t-soft">
-            <Spinner label="Loading availability…" />
-          </p>
-        ) : dates.length === 0 ? (
-          <p className="t-soft">No open slots in the next two weeks — check back soon or try another teacher.</p>
-        ) : (
-          <>
-            <div className="date-row">
-              {dates.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={`date-pill${selectedDate === d ? " sel" : ""}`}
-                  onClick={() => {
-                    setSelectedDate(d);
-                    setSelectedTime(null);
-                  }}
-                >
-                  {new Date(d).toLocaleDateString("en-GB", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                    timeZone: "UTC",
-                  })}
-                </button>
-              ))}
+      {loadingSlots ? (
+        <p className="t-soft" style={{ marginTop: 28 }}>
+          <Spinner label="Loading availability…" />
+        </p>
+      ) : dates.size === 0 ? (
+        <p className="t-soft" style={{ marginTop: 28 }}>
+          No open slots in the next two weeks — check back soon or try another teacher.
+        </p>
+      ) : (
+        <div className="cal-layout">
+          <div>
+            <div className="cal-card">
+              <div className="cal-head">
+                <h2>{monthLabel}</h2>
+                <div className="cal-nav">
+                  <button type="button" onClick={() => changeMonth(-1)} disabled={atCurrentMonth} aria-label="Previous month">
+                    ‹
+                  </button>
+                  <button type="button" onClick={() => changeMonth(1)} aria-label="Next month">
+                    ›
+                  </button>
+                </div>
+              </div>
+              <div className="cal-grid">
+                {DOW.map((d) => (
+                  <div key={d} className="cal-dow">
+                    {d}
+                  </div>
+                ))}
+                {Array.from({ length: firstWeekday }).map((_, i) => (
+                  <div key={`pad-${i}`} className="cal-day empty" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+                  const key = dateKey(viewYear, viewMonth, day);
+                  const hasSlots = dates.has(key);
+                  const isPast = key < todayKey;
+                  const clickable = hasSlots && !isPast;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`cal-day${hasSlots ? " has-slots" : ""}${!clickable ? " disabled" : ""}${selectedDate === key ? " sel" : ""}`}
+                      disabled={!clickable}
+                      onClick={() => {
+                        setSelectedDate(key);
+                        setSelectedTime(null);
+                      }}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {selectedDate && (
-              <div className="time-slots">
-                {timesForDate.map((s) => (
-                  <button
-                    key={s.startTime}
-                    type="button"
-                    className={`tslot${selectedTime === s.startTime ? " sel" : ""}`}
-                    onClick={() => setSelectedTime(s.startTime)}
-                  >
-                    {s.startTime}
-                  </button>
-                ))}
+              <div className="slot-section">
+                <h3>
+                  Times on{" "}
+                  {new Date(selectedDate).toLocaleDateString("en-GB", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "UTC",
+                  })}
+                </h3>
+                <div className="time-slots">
+                  {timesForDate.map((s) => (
+                    <button
+                      key={s.startTime}
+                      type="button"
+                      className={`tslot${selectedTime === s.startTime ? " sel" : ""}`}
+                      onClick={() => setSelectedTime(s.startTime)}
+                    >
+                      {s.startTime}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
 
-      {selectedDate && selectedTime && (
-        <div className="price-summary">
-          <span>
-            {new Date(selectedDate).toLocaleDateString("en-GB", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              timeZone: "UTC",
-            })}{" "}
-            at {selectedTime} · {duration} min · {format === "ONLINE" ? "Online" : "In person"}
-          </span>
-          <span>£{price.toFixed(2)}</span>
+          <aside className="summary-card">
+            <div className="price">
+              £{price.toFixed(2)} <span>/ {duration} min</span>
+            </div>
+            <div className="summary-row">
+              <span className="k">Format</span>
+              <span className="v">{format === "ONLINE" ? "Online" : "In person"}</span>
+            </div>
+            <div className="summary-row">
+              <span className="k">Date &amp; time</span>
+              <span className="v">
+                {selectedDate && selectedTime
+                  ? `${new Date(selectedDate).toLocaleDateString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      timeZone: "UTC",
+                    })}, ${selectedTime}`
+                  : "Select a time"}
+              </span>
+            </div>
+
+            {error && (
+              <p className="field-error" style={{ marginTop: 12 }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ marginTop: 18, width: "100%" }}
+              disabled={!selectedDate || !selectedTime || submitting}
+              onClick={handleContinue}
+            >
+              {submitting ? <Spinner label="Holding your slot…" /> : "Continue"}
+            </button>
+          </aside>
         </div>
       )}
-
-      {error && (
-        <p className="field-error" style={{ marginTop: 16 }}>
-          {error}
-        </p>
-      )}
-
-      <button
-        type="button"
-        className="btn btn-primary"
-        style={{ marginTop: 24 }}
-        disabled={!selectedDate || !selectedTime || submitting}
-        onClick={handleContinue}
-      >
-        {submitting ? <Spinner label="Holding your slot…" /> : "Continue"}
-      </button>
     </div>
   );
 }

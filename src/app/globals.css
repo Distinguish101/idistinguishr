@@ -453,6 +453,8 @@ nav.topbar {
 
 /* Select Time Slot */
 .flow-shell { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+/* Wider variant for the calendar layout's two columns — checkout's .flow-shell stays narrow */
+.cal-shell { max-width: 980px; margin: 0 auto; padding: 48px 24px 72px; }
 .flow-context {
   background: var(--wood);
   color: var(--paper);
@@ -477,19 +479,6 @@ nav.topbar {
 }
 .opt-pill.sel { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 
-.date-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.date-pill {
-  border: 1px solid var(--line);
-  background: #fff;
-  text-align: center;
-  padding: 10px 14px;
-  font-size: 13px;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-.date-pill.sel { background: var(--rust); color: var(--paper); border-color: var(--rust); font-weight: 600; }
-
 .time-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
 .tslot {
   border: 1px solid var(--line);
@@ -502,18 +491,75 @@ nav.topbar {
   cursor: pointer;
 }
 .tslot.sel { background: var(--pine); color: var(--paper); border-color: var(--pine); }
+.tslot:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.price-summary {
+/* Booking calendar — month grid + slots + sticky summary (screen 4) */
+.cal-layout { display: grid; grid-template-columns: 1fr 300px; gap: 32px; align-items: start; margin-top: 24px; }
+
+.cal-card { border: 1px solid var(--line); padding: 22px; }
+.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.cal-head h2 { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button {
+  border: 1px solid var(--line);
+  background: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cal-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-align: center;
+  padding-bottom: 6px;
+}
+.cal-day {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--ink);
+}
+.cal-day.empty { visibility: hidden; }
+.cal-day.has-slots { border-color: var(--line); cursor: pointer; }
+.cal-day.disabled { color: var(--line); cursor: default; }
+.cal-day.has-slots::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--pine); }
+.cal-day.sel { background: var(--rust); border-color: var(--rust); color: var(--paper); font-weight: 600; }
+.cal-day.sel::after { background: var(--paper); }
+.cal-day.has-slots:not(.sel):hover { background: var(--paper-dim); }
+
+.slot-section { margin-top: 24px; }
+.slot-section h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+
+.summary-card { position: sticky; top: 20px; border: 1px solid var(--line); padding: 22px; }
+.summary-card .price { font-family: var(--font-mono); font-size: 24px; font-weight: 700; }
+.summary-card .price span { font-size: 12px; font-weight: 400; color: var(--text-soft); }
+.summary-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  gap: 12px;
+  font-size: 13px;
+  padding: 9px 0;
   border-top: 1px solid var(--line);
-  padding-top: 16px;
-  margin-top: 28px;
-  font-size: 14px;
-  font-weight: 600;
 }
+.summary-row:first-of-type { border-top: none; margin-top: 14px; }
+.summary-row .k { color: var(--text-soft); flex-shrink: 0; }
+.summary-row .v { font-weight: 600; text-align: right; }
 
 /* Auth booking-context banner */
 .booking-banner {
@@ -617,6 +663,9 @@ nav.topbar {
   .sidebar-card { position: static; }
 
   .time-slots { grid-template-columns: repeat(3, 1fr); }
+
+  .cal-layout { grid-template-columns: 1fr; }
+  .summary-card { position: static; }
 
   .lesson-row { grid-template-columns: 56px 1fr; }
   .lesson-row > div:nth-child(3) { grid-column: 1 / -1; margin-top: 4px; }

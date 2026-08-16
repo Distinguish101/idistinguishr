@@ -42,7 +42,7 @@ export default async function TimeSelectPage({
   }
 
   return (
-    <main className="flow-shell">
+    <main className="cal-shell">
       <div className="flow-context">
         <span>Booking {teacher.user.fullName}</span>
         <span className="t">£{(teacher.hourlyRateMinorUnits / 100).toFixed(0)}/hr</span>
