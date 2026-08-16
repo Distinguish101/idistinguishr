@@ -1275,6 +1275,45 @@ Verified via a full re-list afterward: closed accounts drop out of the
 default listing entirely, and exactly the 5 real demo-teacher accounts
 remain, all open.
 
+## 26. Second end-to-end retest — and confirming the Express-onboarding API ceiling
+
+Prompted by a `Karla Patek` test account the user had created by hand
+while poking at the app themselves, sitting `PENDING` with a
+`stripeAccountId` — deleted (user, profile, its 3 availability rules,
+and its now-orphaned Stripe account) the same way as §24/the cleanup
+above, then re-ran the full signup → profile → Stripe → vetting flow one
+more time to make sure the §24 fix genuinely holds and isn't a fluke.
+
+The Chrome extension wasn't connecting this time, so the flow was driven
+at the API level instead of clicking through the browser: real
+`POST /api/auth/signup`, a real NextAuth credentials login (CSRF token +
+cookie jar via `curl`), a real `PUT /api/teacher/profile`, and — notably —
+the actual production `GET /api/stripe/connect` route (not a hand-rolled
+equivalent), which created a genuine new Stripe account exactly as a real
+teacher's browser would.
+
+Tried to also finish onboarding via the API rather than the hosted UI, by
+directly filling in `identity.individual`/`defaults.profile.business_url`
+on the account. Hit a hard, non-negotiable wall: Stripe rejects
+`identity.attestations.terms_of_service.account.*` submitted by the
+platform for an Express account with `tos_acceptance_on_behalf_not_allowed`
+— Stripe requires the actual account holder to accept ToS through Stripe's
+own hosted UI, not something a platform can do on their behalf via API.
+This is the same ceiling §19 already ran into with the v1 test-token
+shortcuts not existing for v2 identity — now confirmed from the opposite
+direction too. Handed the real, freshly-generated account-link URL to the
+user to click through by hand (same test-mode shortcuts as always), which
+was the fastest path to a genuine result once the API route was proven
+to be the actual blocker.
+
+**Result:** confirmed via direct DB query — `approvalStatus: APPROVED`,
+`stripeOnboardingComplete: true` — and via Vercel's logs, multiple real
+`200` responses on `/api/webhooks/stripe` with no signature failures and
+no alert emails triggered, meaning the §25 alerting correctly stayed
+silent because nothing was actually wrong. The §24 fix holds under a
+second, independent real test. Test user, profile, and Stripe account all
+cleaned up afterward.
+
 ---
 
 ## Where things stand
