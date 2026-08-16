@@ -98,7 +98,7 @@ const TEACHERS: TeacherSeed[] = [
     formatsOffered: ["ONLINE", "IN_PERSON"],
     locationText: "Digbeth, Birmingham",
     credentials: "Session drummer for 9 years, taught drum workshops at local youth music programmes.",
-    photoUrl: `https://plus.unsplash.com/premium_photo-1689747698547-271d2d553cee${PHOTO_PARAMS}`,
+    photoUrl: `https://images.unsplash.com/photo-1522529599102-193c0d76b5b6${PHOTO_PARAMS}`,
     stripeAccountId: "acct_1U2BA6GnMYbQjlpA",
     availability: [
       { dayOfWeek: 2, startTime: "18:00", endTime: "20:00" },
