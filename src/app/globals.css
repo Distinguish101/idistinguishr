@@ -288,6 +288,37 @@ nav.topbar {
   align-items: end;
 }
 .search-card .field { margin-bottom: 0; }
+
+/* Instrument quick-picker — real links straight to filtered results,
+   no client JS, same as every other filter in this app. */
+.chip-picker { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.chip-picker a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 7px 14px 7px 10px;
+  border-radius: 2px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.chip-picker a:hover { border-color: var(--rust); background: var(--paper-dim); }
+.chip-picker .glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--paper-dim);
+  color: var(--pine-dark);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 .hero-art {
   position: relative;
   aspect-ratio: 1 / 1;

@@ -44,10 +44,21 @@ export default async function HomePage() {
                 Search
               </button>
             </form>
-            {instruments.length === 0 && (
+            {instruments.length === 0 ? (
               <p className="field-hint" style={{ marginTop: 12 }}>
                 No teachers are live yet — check back soon.
               </p>
+            ) : (
+              <div className="chip-picker">
+                {instruments.map((i) => (
+                  <Link key={i} href={`/results?instrument=${encodeURIComponent(i)}`}>
+                    <span className="glyph" aria-hidden="true">
+                      ♪
+                    </span>
+                    {i}
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
           <div className="hero-art">
