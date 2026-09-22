@@ -87,3 +87,53 @@ throughout.
   or cloud-specific auth, base64-encoded) for a service account scoped to the `idistinguishr` namespace.
   This can't be set up until a cluster exists (Part 4) — the workflow will fail at the "Configure
   kubeconfig" step until then. Flagging clearly rather than working around it.
+
+- Committed Parts 1-3 locally (`312005a`, branch `main`) after reverting a stray `allowScripts` block
+  that `npm approve-scripts` had written into `package.json` — that's a local machine-specific npm
+  security-gate artifact, not a real project change, so it was excluded from the commit. **Not pushed
+  to `origin/main` yet** — pushing to the shared repo needs explicit go-ahead first.
+
+### Part 4: cluster, cutover, and human-only steps — status
+
+Per the brief, flagging these clearly rather than attempting to work around them:
+
+- **Cluster provisioning**: not done. No cluster exists yet (EKS/GKE/DOKS or reuse an existing one —
+  real billing implications, needs a decision).
+- **DNS**: not done — no domain/A-record exists yet, and none should until the k8s deployment is
+  verified. Vercel's existing domain/DNS has not been touched.
+- **Docker Desktop / WSL2 setup on this machine**: enabled the required Windows features
+  (`Microsoft-Windows-Subsystem-Linux`, `VirtualMachinePlatform`) but **a restart is still needed**
+  before `docker build` can be verified locally.
+- **Stripe webhook URL + Google OAuth callback updates**: not done — correctly deferred until after
+  cutover, per the brief.
+- Vercel deployment (`https://idistinguishr.vercel.app`) has not been touched, changed, or disconnected.
+
+## 2026-09-23 (continued after restart)
+
+- User restarted the machine to finish the WSL2/Docker Desktop setup. Docker's backend took ~30s to
+  finish initializing after Docker Desktop launched (normal first-run behavior) before `docker info`
+  succeeded — engine confirmed: Docker 29.8.0, `linux/x86_64` (WSL2 backend).
+- Ran the actual `docker build .` (runtime image) verification the brief required: **succeeded**.
+  Compiled, typechecked, and generated all 26 routes inside the container, same as the local `npm run
+  build` run. Docker's linter flagged `SecretsUsedInArgOrEnv` for the `AUTH_SECRET`/`STRIPE_SECRET_KEY`
+  build ARGs — expected and fine, since these are dummy placeholder values only (documented in the
+  Dockerfile comments), never real secrets baked into the image.
+- `docker build --target=builder` (the `:migrate` image): **succeeded**, fully reused the cached
+  `deps`/`builder` layers from the runtime build (76.5s, almost entirely spent on export/unpack, not
+  rebuilding).
+- Verified the lean-runtime / full-CLI split actually works as designed:
+  - Runtime image: `node_modules/.bin/prisma` **absent** (confirmed) — 495MB.
+  - Migrate image: `npx prisma --version` **works**, full CLI present (confirmed) — 1.45GB (expected,
+    since it retains all devDependencies).
+- Ran the runtime image as a real container (placeholder secrets — no real `DATABASE_URL` was ever
+  typed into this chat, per the brief's explicit instruction) and hit both health endpoints:
+  - `GET /api/health` → `200 {"status":"ok"}` instantly, regardless of DB state (liveness, as designed).
+  - `GET /api/health?ready=1` against a deliberately unreachable DB host → `503` with a clear Prisma
+    connection error in the JSON body, not a crash (readiness, as designed).
+  - Container logs showed a clean Next.js standalone-server startup (`✓ Ready in 323ms`).
+  - Cleaned up: removed the test container and both local test images afterwards.
+- **Part 1 is now fully verified** — code, `docker build` for both targets, and a running-container
+  smoke test all pass. What's still outstanding for Part 1 is only a smoke test against the *real*
+  external Postgres instance, which needs real `DATABASE_URL` credentials that shouldn't be pasted into
+  this chat — that check happens naturally as part of the Part 4 "verify before cutover" step once a
+  cluster exists, using the k8s Secret (copied directly from the Vercel dashboard, per the brief).
