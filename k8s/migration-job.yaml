@@ -1,0 +1,29 @@
+# Runs `prisma migrate deploy` (never `migrate dev` — this only applies
+# existing, already-committed migrations; it never prompts and is safe for
+# automation) against the `migrate`-tagged image, i.e. the Dockerfile's
+# `builder` stage, which still has the full `prisma` CLI (the runtime image
+# deliberately drops it — see Dockerfile comments).
+#
+# Run this once per release, BEFORE rolling the Deployment to the new image.
+# Jobs don't self-clean, so each release deletes and reapplies this file:
+#
+#   kubectl delete job idistinguishr-migrate -n idistinguishr --ignore-not-found
+#   kubectl apply -f k8s/migration-job.yaml
+#   kubectl wait --for=condition=complete job/idistinguishr-migrate -n idistinguishr --timeout=120s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: idistinguishr-migrate
+  namespace: idistinguishr
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/distinguish101/idistinguishr:migrate # replace tag per release, see docs/k8s-deploy.md
+          command: ["npx", "prisma", "migrate", "deploy"]
+          envFrom:
+            - secretRef:
+                name: idistinguishr-secrets

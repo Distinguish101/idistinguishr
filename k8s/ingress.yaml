@@ -1,0 +1,42 @@
+# Assumes ingress-nginx + cert-manager with a ClusterIssuer named
+# "letsencrypt-prod" already set up in the cluster. If the actual cluster
+# runs something else (ALB, Traefik, GKE ingress), the ingressClassName and
+# annotations below need to change accordingly — see docs/k8s-deploy.md.
+#
+# IMPORTANT — Stripe webhook signature verification (POST /api/webhooks/stripe)
+# needs the raw request body byte-for-byte, untouched, to compute the HMAC
+# signature. Nothing in this ingress path may buffer-and-rewrite or
+# body-parse that route:
+#   - proxy-body-size is set generously below so large payloads aren't
+#     truncated (Stripe payloads are small, but don't cut it close).
+#   - Do not add a WAF/ModSecurity rule, request-transforming annotation, or
+#     any "configuration-snippet" that touches the request body on this path.
+#     nginx's default proxying (even with request buffering on) passes the
+#     body through unmodified; the risk is exclusively from *added* body
+#     rewriting, not the ingress controller's default behavior.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: idistinguishr
+  namespace: idistinguishr
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "4m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - REPLACE_WITH_DOMAIN # e.g. idistinguishr.example.com — see docs/k8s-deploy.md
+      secretName: idistinguishr-tls
+  rules:
+    - host: REPLACE_WITH_DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: idistinguishr
+                port:
+                  number: 80

@@ -1,0 +1,22 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+
+# docs / non-runtime
+docs
+README.md
+LICENSE
+
+# k8s manifests aren't needed inside the image
+k8s
+
+# editor / OS cruft
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
