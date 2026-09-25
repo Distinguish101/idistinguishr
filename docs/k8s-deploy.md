@@ -9,11 +9,13 @@ not touched or disconnected until the k8s deployment is fully verified. See
 
 ## Prerequisites
 
-- A Kubernetes cluster you have `kubectl` access to (any managed or self-hosted cluster; see the brief /
-  migration log for cluster-provisioning status — that part is out of scope for this doc).
-- `ingress-nginx` and `cert-manager` installed in the cluster, with a `ClusterIssuer` named
-  `letsencrypt-prod` (or adjust `k8s/ingress.yaml` to match whatever the actual cluster runs — ALB,
-  Traefik, GKE ingress, and a different `ClusterIssuer` name are all fine, just update the manifest).
+- A Kubernetes cluster you have `kubectl` access to (currently: a self-managed k3s cluster on a single
+  Oracle Cloud Always Free VM — see the migration log for provisioning details). k3s ships with Traefik
+  as its built-in ingress controller, which `k8s/ingress.yaml` assumes; if the cluster runs something
+  else (ingress-nginx, ALB, GKE ingress), adjust that manifest's `ingressClassName` and its
+  Traefik-specific `Middleware`/annotation accordingly.
+- `cert-manager` installed in the cluster, with a `ClusterIssuer` named `letsencrypt-prod` (adjust
+  `k8s/ingress.yaml` if a different issuer name is used).
 - `metrics-server` installed, if you want to use `k8s/hpa.yaml` (optional).
 - Docker, and push access to a container registry. This doc assumes GitHub Container Registry (GHCR) at
   `ghcr.io/distinguish101/idistinguishr`, matching Part 3's CI/CD setup — swap the registry path in every
@@ -60,7 +62,7 @@ kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
 # Edit k8s/ingress.yaml first: replace REPLACE_WITH_DOMAIN with the real domain,
-# and the ClusterIssuer/ingressClassName if the cluster doesn't use ingress-nginx + cert-manager.
+# and the ClusterIssuer/ingressClassName if the cluster doesn't use Traefik + cert-manager.
 kubectl apply -f k8s/ingress.yaml
 
 # optional

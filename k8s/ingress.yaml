@@ -1,19 +1,18 @@
-# Assumes ingress-nginx + cert-manager with a ClusterIssuer named
-# "letsencrypt-prod" already set up in the cluster. If the actual cluster
-# runs something else (ALB, Traefik, GKE ingress), the ingressClassName and
-# annotations below need to change accordingly — see docs/k8s-deploy.md.
+# Uses Traefik, the ingress controller k3s bundles by default — no separate
+# ingress-nginx install. Assumes cert-manager is installed with a
+# ClusterIssuer named "letsencrypt-prod". If the cluster runs a different
+# ingress controller, ingressClassName and the traefik.* annotation/Middleware
+# below need to change accordingly — see docs/k8s-deploy.md.
 #
 # IMPORTANT — Stripe webhook signature verification (POST /api/webhooks/stripe)
 # needs the raw request body byte-for-byte, untouched, to compute the HMAC
-# signature. Nothing in this ingress path may buffer-and-rewrite or
-# body-parse that route:
-#   - proxy-body-size is set generously below so large payloads aren't
-#     truncated (Stripe payloads are small, but don't cut it close).
-#   - Do not add a WAF/ModSecurity rule, request-transforming annotation, or
-#     any "configuration-snippet" that touches the request body on this path.
-#     nginx's default proxying (even with request buffering on) passes the
-#     body through unmodified; the risk is exclusively from *added* body
-#     rewriting, not the ingress controller's default behavior.
+# signature. Traefik has no default body-size limit (unlike nginx's 1MB
+# default, which is why the earlier nginx version of this file needed a
+# proxy-body-size override) and doesn't body-parse by default, so nothing
+# extra is needed for that here. Do not add a WAF plugin, request-transforming
+# middleware, or any Middleware resource that touches the request body on
+# this path — only the plain HTTPS-redirect Middleware below applies, and it
+# only touches the scheme/headers, never the body.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -21,10 +20,9 @@ metadata:
   namespace: idistinguishr
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "4m"
+    traefik.ingress.kubernetes.io/router.middlewares: idistinguishr-redirect-https@kubernetescrd
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
     - hosts:
         - REPLACE_WITH_DOMAIN # e.g. idistinguishr.example.com — see docs/k8s-deploy.md
@@ -40,3 +38,16 @@ spec:
                 name: idistinguishr
                 port:
                   number: 80
+---
+# Traefik-native equivalent of nginx's ssl-redirect annotation: redirects
+# plain HTTP requests to HTTPS. Referenced by the Ingress above via the
+# router.middlewares annotation.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: idistinguishr
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
