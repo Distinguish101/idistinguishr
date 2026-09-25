@@ -255,3 +255,23 @@ Per the brief, flagging these clearly rather than attempting to work around them
 - **Not yet done**: `KUBE_CONFIG` GitHub Actions secret, applying the app's own `k8s/` manifests
   (namespace/secret/migration-job/deployment/service/ingress/hpa) to this real cluster, DNS, Stripe
   webhook/Google OAuth callback updates, and the real-Postgres verification.
+
+### KUBE_CONFIG GitHub Actions secret
+
+- `gh` CLI wasn't installed on this machine, so set this up via the GitHub web UI instead (user
+  explicitly asked for it) — GitHub's own repository-secrets page, which encrypts at rest and never
+  exposes the value in logs, is the intended place for this, so used Claude in Chrome (already
+  logged in) to fill in and submit `Settings → Secrets and variables → Actions → New repository secret`.
+- Retrieved `/etc/rancher/k3s/k3s.yaml` from the VM, patched the `server:` field from `127.0.0.1` to
+  the public IP (`144.21.58.215`) and renamed the `default` cluster/context/user entries to
+  `idistinguishr-oci`, saved locally as `~/.kube/idistinguishr-oci.yaml` (same local-only handling as
+  the SSH private key — never pasted into chat). Base64-encoded it and pasted that into the secret's
+  value field, named `KUBE_CONFIG` to match what `.github/workflows/deploy.yml` already expects.
+- **Confirmed added**: GitHub's UI showed "Repository secret added." and the secret now appears in the
+  repo's Actions secrets list. Deleted the local plaintext base64 temp file afterwards.
+- The CI/CD pipeline (`.github/workflows/deploy.yml`) should now be able to run end-to-end on the next
+  push to `main` — though the migration Job / Deployment it applies still target the `idistinguishr`
+  namespace and Secret that don't exist on this cluster yet (see below).
+- **Not yet done**: applying the app's own `k8s/` manifests (namespace/secret/migration-job/deployment/
+  service/ingress/hpa) to this real cluster for the first time, DNS, Stripe webhook/Google OAuth
+  callback updates, and the real-Postgres verification.
