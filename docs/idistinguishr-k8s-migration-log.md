@@ -275,3 +275,30 @@ Per the brief, flagging these clearly rather than attempting to work around them
 - **Not yet done**: applying the app's own `k8s/` manifests (namespace/secret/migration-job/deployment/
   service/ingress/hpa) to this real cluster for the first time, DNS, Stripe webhook/Google OAuth
   callback updates, and the real-Postgres verification.
+
+### First real deployment attempt — caught an architecture mismatch
+
+- Applied `k8s/namespace.yaml` — created cleanly.
+- The push of the `KUBE_CONFIG` commit triggered the CI/CD workflow end-to-end for the first time:
+  `build-and-push` succeeded, and `deploy` got as far as reaching the cluster (kubeconfig works) before
+  getting stuck applying `migration-job.yaml`, since the app's own Secret didn't exist yet.
+- User filled in `k8s/secret.yaml` themselves from the Vercel dashboard (copied out from
+  `secret.example.yaml`, edited directly in Notepad — never typed into this chat, per the brief).
+  `ADMIN_EMAILS` was empty on Vercel; user chose to set a real value now rather than carry the empty
+  string over. Applied the Secret (`kubectl apply`), confirmed all 11 expected keys present via
+  `kubectl get secret -o jsonpath='{.data}'` (keys only, values never read or displayed), deleted the
+  local file immediately after.
+- **Found a real bug while investigating why the migration Job was stuck**: `kubectl describe pod`
+  showed `ImagePullBackOff` — `"no match for platform in manifest: not found"`. The GitHub Actions
+  runner (`ubuntu-latest`) builds `amd64`-only images by default, but the Oracle Cloud VM is `aarch64`
+  (Ampere ARM) — the `:migrate` image GHCR had simply couldn't run there. This wasn't caught by Part 1's
+  local Docker Desktop verification because that machine is `x86_64`, so the same-platform image pulled
+  and ran fine there.
+- **Fixed**: added `docker/setup-qemu-action@v3` and `platforms: linux/amd64,linux/arm64` to both
+  `docker/build-push-action` steps in `.github/workflows/deploy.yml`. Built for both architectures
+  deliberately, not just arm64 — a future move to a typical amd64 managed cluster (the DOKS path
+  discussed earlier, if budget allows later) shouldn't require touching this workflow again. Deleted the
+  stuck `idistinguishr-migrate` Job so it doesn't linger.
+- **Not yet done**: waiting on the next CI run (multi-arch rebuild) to actually re-run the migration Job
+  and roll out the Deployment successfully; then Service/Ingress, DNS, Stripe webhook/Google OAuth
+  callback updates, and the real-Postgres verification.
