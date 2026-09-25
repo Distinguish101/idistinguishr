@@ -137,3 +137,54 @@ Per the brief, flagging these clearly rather than attempting to work around them
   external Postgres instance, which needs real `DATABASE_URL` credentials that shouldn't be pasted into
   this chat — that check happens naturally as part of the Part 4 "verify before cutover" step once a
   cluster exists, using the k8s Secret (copied directly from the Vercel dashboard, per the brief).
+
+## 2026-09-25: cluster decision and provisioning (Part 4 begins)
+
+- **Cluster decision**: user is cash-constrained right now, so chose **Oracle Cloud "Always Free"**
+  (self-managed k3s on a free ARM VM) over a paid managed option (DigitalOcean DOKS was the paid
+  alternative discussed, ~$36/mo minimum for 2 nodes + a load balancer). Tradeoffs discussed and
+  accepted: no managed control plane (self-admin burden), single VM = no infra redundancy, no SLA,
+  scarce ARM capacity in some regions, more manual CI/CD networking setup. Plan is to graduate to a
+  paid managed cluster later once the app has revenue — the k8s manifests are portable either way.
+  Corrected an earlier (stale) claim of 4 OCPU/24GB Always Free — Oracle quietly halved this in 2026;
+  actual allowance is **2 OCPU / 12GB RAM total**, confirmed against Oracle's own docs. Home region:
+  **UK South (London)**, chosen for latency given the UK-only user base.
+- Oracle account created by the user (account creation, card entry, and login are user-only actions —
+  not something this session does). Tenancy: `Distinguish`.
+- **Provisioned the compute instance by driving the OCI Console via the Claude in Chrome browser
+  extension** (user's choice over doing it manually), after installing/signing into that extension.
+  Instance `idistinguishr-k8s`: shape `VM.Standard.A1.Flex` (Ampere, Always Free-eligible), resized to
+  the full **2 OCPU / 12 GB memory** allowance (default was 1/6). Oracle Linux 9. New VCN
+  (`idistinguishr-vcn`) and public subnet created alongside it (no pre-existing network in this fresh
+  tenancy).
+- **SSH keys**: the OCI console's dedicated "Add SSH keys" step never rendered in this session — after
+  thorough investigation (the whole instance-creation form lives inside a `maui-preact` plugin iframe
+  that's invisible to both the accessibility tree and a `document.body` DOM search, so it isn't a UI
+  skip, it's a real rendering gap for this account/session). Workaround: generated an ed25519 keypair
+  locally on this machine (`~/.ssh/idistinguishr_oci` / `.pub` — private key never leaves this machine,
+  never pasted into chat or the browser) and injected the public key via a `#cloud-config` /
+  `ssh_authorized_keys` block pasted into the "Initialization script" section instead. OCI's own
+  "No SSH access" confirmation dialog at create time (which only checks its own metadata field) was
+  correctly overridden, since cloud-init provides equivalent access through a different mechanism.
+- **Instance created successfully** on the first attempt — no "out of host capacity" issue hit in
+  London for the Ampere A1 shape.
+- **Networking, in two steps** (assigning a public IP is not automatic even with a "public subnet"):
+  1. Used the console's "Connect public subnet to internet" quick action to create the NSG
+     (`ig-quick-action-NSG`) and confirm/attach the VCN's internet gateway + route table. Added ingress
+     rules while there: **22/tcp (SSH), 80/tcp (HTTP), 443/tcp (HTTPS), 6443/tcp (k8s API — needed later
+     for the GitHub Actions workflow to reach `kubectl`)**. Egress was already open to `0.0.0.0/0`.
+  2. The instance's primary VNIC still had no public IP after that (`(Not Assigned)`) — quick-action
+     wizards configure the network path but don't touch the VNIC. Assigned one manually: VNIC → IP
+     administration → Edit private IP → **Ephemeral public IP**. Got `144.21.58.215`.
+- **Verified SSH access end-to-end**: `ssh -i ~/.ssh/idistinguishr_oci opc@144.21.58.215` succeeds,
+  confirms `idistinguishr-k8s`, Oracle Linux 9, `aarch64` kernel (`6.12.0-206...el9uek.aarch64`) — the
+  cloud-init SSH key workaround is confirmed working end-to-end, and the box is reachable.
+- **Note on OCI Console reliability this session**: hit a reproducible rendering bug several times where
+  a specific control (the "Automatically assign public IPv4 address" toggle during instance creation,
+  and later a VNIC row's "..." menu) would corrupt the whole page into a repeating grid of hundreds of
+  toggle switches after being clicked, requiring a full page reload to recover. Worked around by
+  reloading and either avoiding the broken control (public IP assigned after creation instead, as above)
+  or retrying the same action once more deliberately after a fresh load. Not a sign of anything wrong
+  with the account/instance — purely a client-side console glitch.
+- **Not yet done**: installing k3s on the VM, `KUBE_CONFIG` GitHub Actions secret, DNS, Stripe
+  webhook/Google OAuth callback updates, and the real-Postgres verification. Vercel deployment untouched.
