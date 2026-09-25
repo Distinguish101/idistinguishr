@@ -26,6 +26,22 @@ not touched or disconnected until the k8s deployment is fully verified. See
 
 ## First-time setup
 
+### 0. Install cert-manager (once per cluster, not per release)
+
+cert-manager isn't part of the app's own manifests — it's a cluster-level add-on, installed once:
+
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
+
+kubectl apply -f k8s/cluster-issuer.yaml
+kubectl get clusterissuer letsencrypt-prod
+```
+
+The `ClusterIssuer` registers an ACME account with Let's Encrypt immediately (should show `READY True`
+within a few seconds), but won't actually issue a certificate until DNS points at the cluster and an
+`Ingress` requests one — see the cutover steps below.
+
 ### 1. Build and push both images
 
 The runtime image (lean, no `prisma` CLI) and the migrate image (same Dockerfile, `builder` target, still

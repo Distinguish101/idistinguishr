@@ -227,6 +227,31 @@ Per the brief, flagging these clearly rather than attempting to work around them
   actually be applied. Also still need cert-manager installed for the `letsencrypt-prod` ClusterIssuer
   the ingress manifest references — neither exists on the cluster yet.
 - **Not yet done**: `KUBE_CONFIG` GitHub Actions secret (needs the kubeconfig above, base64-encoded —
-  will confirm with the user before writing anything to the repo's secrets), the ingress-controller
-  decision above, cert-manager, applying `k8s/` manifests to this real cluster, DNS, Stripe
+  will confirm with the user before writing anything to the repo's secrets), applying `k8s/` manifests
+  to this real cluster, DNS, Stripe webhook/Google OAuth callback updates, and the real-Postgres
+  verification.
+
+### Ingress: switched to Traefik, installed cert-manager
+
+- User chose Traefik (k3s's bundled ingress controller) over installing ingress-nginx separately.
+  Rewrote `k8s/ingress.yaml`: `ingressClassName: traefik`, replaced nginx's `ssl-redirect`/
+  `proxy-body-size` annotations with a Traefik `Middleware` (`redirectScheme` to https) — no body-size
+  override needed since Traefik has no default limit (nginx's is 1MB, which is why that annotation
+  existed originally). The Stripe webhook raw-body reasoning in the file's comments still holds; updated
+  the wording to match Traefik. Validated both resources with `kubectl apply --dry-run=client` against
+  the live cluster — confirms Traefik's CRDs (including `Middleware`) are already registered by k3s.
+  Updated `docs/k8s-deploy.md`'s prerequisites and apply-order accordingly.
+- Installed **cert-manager v1.21.2** on the cluster (`kubectl apply` of the upstream release manifest —
+  not part of the app's own `k8s/` manifests, it's a one-time cluster add-on). All three deployments
+  (`cert-manager`, `cert-manager-cainjector`, `cert-manager-webhook`) came up `Available` within ~10s.
+- Added `k8s/cluster-issuer.yaml`: a `ClusterIssuer` named `letsencrypt-prod` (matching what
+  `ingress.yaml` already references), ACME HTTP-01 validation via the Traefik ingress class, contact
+  email `idistinguish@gmail.com` (user confirmed). Applied it — **registered successfully with Let's
+  Encrypt's production ACME server**, `READY True` within 5 seconds. It won't actually issue a
+  certificate until DNS points at the cluster and an `Ingress` requests one (HTTP-01 needs Let's
+  Encrypt to reach `http://<domain>/.well-known/acme-challenge/...` on the cluster's public IP) — that
+  happens naturally at cutover, per the brief's sequencing. Documented this as a new "step 0" (one-time
+  cluster setup, distinct from the per-release apply order) in `docs/k8s-deploy.md`.
+- **Not yet done**: `KUBE_CONFIG` GitHub Actions secret, applying the app's own `k8s/` manifests
+  (namespace/secret/migration-job/deployment/service/ingress/hpa) to this real cluster, DNS, Stripe
   webhook/Google OAuth callback updates, and the real-Postgres verification.
