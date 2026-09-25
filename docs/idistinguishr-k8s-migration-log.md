@@ -188,3 +188,45 @@ Per the brief, flagging these clearly rather than attempting to work around them
   with the account/instance — purely a client-side console glitch.
 - **Not yet done**: installing k3s on the VM, `KUBE_CONFIG` GitHub Actions secret, DNS, Stripe
   webhook/Google OAuth callback updates, and the real-Postgres verification. Vercel deployment untouched.
+
+### k3s installation
+
+- Pushed the Part 4 provisioning commit (`5552955`) to `origin/main` (user confirmed).
+- Oracle Linux 9.8 ships with SELinux `Enforcing` and `firewalld` active by default. Decisions made:
+  - **Disabled `firewalld`** on the host. k3s/flannel are commonly documented as conflicting with
+    firewalld's nftables rules on RHEL-family distros (breaks pod-to-pod/DNS traffic). The cloud NSG
+    (22/80/443/6443 ingress, all else closed) is the real perimeter here, so this is safe, not a
+    security regression.
+  - Installed the **k3s-selinux** policy RPM before installing k3s, so it runs correctly under
+    `Enforcing` rather than needing to disable SELinux. The `rpm.rancher.io` repo file Rancher's docs
+    point to (`rancher-k3s-common.repo`) 404's now — installed the current release directly from the
+    `k3s-io/k3s-selinux` GitHub releases instead (`v1.6.latest.1`, el9 noarch).
+  - Ran the standard installer (`curl -sfL https://get.k3s.io | sudo sh -`) — no flags needed beyond
+    the SELinux/firewalld prep above. **Succeeded on the first attempt**: node `idistinguishr-k8s` came
+    up `Ready` as `control-plane` within ~30s (k3s v1.36.4+k3s1, containerd, all `kube-system` pods
+    Running/Completed as expected, including k3s's bundled Traefik ingress controller and
+    local-path-provisioner).
+- **Fixed a real gotcha for remote access**: the default install generates the API server's TLS cert
+  with only the private IP (`10.0.0.253`) and cluster-internal names in its SAN list — not the public
+  IP. Left as-is, this would make `kubectl`/GitHub Actions fail TLS verification connecting from
+  outside the VCN. Fixed by adding `tls-san: 144.21.58.215` to `/etc/rancher/k3s/config.yaml`, deleting
+  the cached `dynamic-cert.json` to force regeneration, and restarting the service — confirmed the
+  regenerated cert's SAN list now includes the public IP, and the node stayed `Ready` throughout.
+- Verified external reachability: `curl https://144.21.58.215:6443/version` (unauthenticated) got a
+  clean `401 Unauthorized` JSON response rather than a connection/TLS error — confirms the NSG's 6443
+  rule and the new cert both work correctly from outside the VCN.
+- Fetched `/etc/rancher/k3s/k3s.yaml`, patched its `server:` field from `127.0.0.1` to the public IP and
+  renamed the `default` cluster/context/user entries to `idistinguishr-oci` for clarity, saved locally
+  to `~/.kube/idistinguishr-oci.yaml` on this machine (same handling as the SSH private key — stays
+  local, never pasted into chat). Verified `kubectl get nodes`/`get namespaces` work against the live
+  cluster through it.
+- **Noted for later, not yet acted on**: k3s ships with **Traefik** as its bundled ingress controller,
+  but `k8s/ingress.yaml` (written in Part 2, before a cluster existed) assumes **ingress-nginx**
+  (`ingressClassName: nginx`). Will need to either swap that manifest to Traefik's ingress class, or
+  disable Traefik at k3s install time and install ingress-nginx instead, before Part 4's manifests can
+  actually be applied. Also still need cert-manager installed for the `letsencrypt-prod` ClusterIssuer
+  the ingress manifest references — neither exists on the cluster yet.
+- **Not yet done**: `KUBE_CONFIG` GitHub Actions secret (needs the kubeconfig above, base64-encoded —
+  will confirm with the user before writing anything to the repo's secrets), the ingress-controller
+  decision above, cert-manager, applying `k8s/` manifests to this real cluster, DNS, Stripe
+  webhook/Google OAuth callback updates, and the real-Postgres verification.
