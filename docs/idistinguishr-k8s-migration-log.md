@@ -387,3 +387,20 @@ Per the brief, flagging these clearly rather than attempting to work around them
   purchased domain (same `kubectl apply` process, now proven) and the DNS/Stripe/Google OAuth updates
   that go with an actual domain. Left the sslip.io ingress running on the cluster — harmless, costs
   nothing, and gives a real working HTTPS URL to poke at in the meantime.
+
+### Manual click-through and proof of k8s hosting
+
+- Clicked through the live sslip.io URL in the browser: homepage loaded correctly (instrument search,
+  quick-picker chips), searching "Guitar" returned real data from the production DB (teacher Tomasz
+  Nowak, £30/hr, 4.0 rating), and his profile page showed a live-computed "Next available" date —
+  confirms the booking-availability logic is running correctly against the real database, not just
+  that static pages render.
+- User asked for concrete proof this is really k8s-hosted, not just a VM. Demonstrated live: deleted one
+  of the two running `idistinguishr` pods directly (`kubectl delete pod`) while polling
+  `GET /api/health` every 0.5s. Result: one transient `502` in the instant right after the kill (the
+  second replica was still absorbing traffic), then back to `200` for the rest of the window — and
+  Kubernetes's ReplicaSet controller automatically created a replacement pod with no intervention,
+  restoring 2/2 replicas. This is the actual self-healing behavior a plain VM or bare Docker container
+  doesn't have on its own.
+- No code or manifest changes in this session — purely manual verification. Noting it here since the
+  user specifically asked whether the log was being kept current throughout.
