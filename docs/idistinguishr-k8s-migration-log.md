@@ -302,3 +302,52 @@ Per the brief, flagging these clearly rather than attempting to work around them
 - **Not yet done**: waiting on the next CI run (multi-arch rebuild) to actually re-run the migration Job
   and roll out the Deployment successfully; then Service/Ingress, DNS, Stripe webhook/Google OAuth
   callback updates, and the real-Postgres verification.
+
+### First successful deployment — app is live on the cluster
+
+- Multi-arch CI run succeeded, but the automated `deploy` job still failed applying the migration Job —
+  not an arch issue this time, an actual data problem: `DATABASE_URL` in the applied Secret was still
+  the literal template placeholder. **This was a mistake in earlier guidance to the user** — a previous
+  log entry said `DATABASE_URL`/`SITE_URL` could both "stay as-is," but that's only true for `SITE_URL`
+  (whose placeholder happens to already be the real Vercel URL); `DATABASE_URL`'s placeholder was never
+  a real value. Corrected.
+- Getting a working `DATABASE_URL` into the Secret took several rounds, each surfacing a real, distinct
+  problem — worth recording since each one changed the actual error message, confirming genuine progress
+  each time rather than repetition:
+  1. Placeholder value (`user:password@host:5432/...`) — `P1001: Can't reach database server at host`.
+  2. Manually-retyped value with a stray comma in the hostname (`db,example.com`) — same error, garbled
+     host.
+  3. A generic-looking but still-fake hostname (`db.example.com`) — turned out the user was typing a
+     value from memory each time rather than copying a real one, because **Vercel's `DATABASE_URL` was
+     set as a "Sensitive" environment variable**, which Vercel deployments can use but which can never be
+     revealed or copied again through the dashboard afterwards, even by the account owner. This fully
+     explained why nothing copied was ever the real value.
+  4. Redirected to the actual source of truth instead: **Neon** (per
+     `docs/idistinguishr-db-hosting-decision.md`) — walked the user through `console.neon.tech` →
+     project → the `Primary` compute's **Connect** button to get the real connection string directly
+     from the database provider, not Vercel.
+  5. First real-value attempt still failed, differently — `P1012: the URL must start with the protocol
+     postgresql://` — the pasted value likely included the `DATABASE_URL=` prefix from Neon's
+     copy-as-.env-line convenience format, not just the URL itself.
+  6. Final attempt **succeeded**: migration Job completed, connected to
+     `ep-floral-bird-zajoqg4v-pooler...eu-west-2.aws.neon.tech`, found 3 existing migrations, "No
+     pending migrations to apply" (expected — same production DB Vercel already uses, already migrated).
+- **Workflow adjustment made mid-way, per explicit user feedback**: originally `k8s/secret.yaml` was
+  deleted immediately after every single `kubectl apply`, per the brief's "never leave it lying around"
+  guidance — but that meant re-filling all 11 values from scratch on every retry during active debugging,
+  which the user (rightly) pushed back on as excessive. Adjusted to: keep the file in place (it's
+  gitignored, so no commit risk) across an active fix-and-retry cycle, and only delete it once the
+  change is actually confirmed working. Deleted it for good immediately after the migration Job
+  succeeded.
+- With the Secret finally correct, applied `k8s/deployment.yaml` and `k8s/service.yaml`: **rolled out
+  successfully**, 2/2 replicas `Running`. Port-forwarded to the Service and hit both health endpoints
+  directly: `GET /api/health` → `200 {"status":"ok"}`, and critically `GET /api/health?ready=1` → also
+  `200 {"status":"ok"}` — confirms the running app pods can genuinely reach and query the real Neon
+  database from inside the cluster, not just that the container starts.
+- Applied `k8s/hpa.yaml` (optional) — k3s already bundles `metrics-server`, so this worked immediately
+  with no extra setup.
+- **The app is now actually running on Kubernetes**, backed by the real production database. What's
+  deliberately still not done, per the brief's sequencing: `k8s/ingress.yaml` (needs a real domain —
+  still has `REPLACE_WITH_DOMAIN` placeholders), DNS, and the Stripe webhook/Google OAuth callback
+  updates that only make sense once a domain exists. The Vercel deployment remains completely untouched
+  and is still the live production site.
