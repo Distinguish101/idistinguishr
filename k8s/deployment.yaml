@@ -37,6 +37,14 @@ spec:
               value: http://jaeger.idistinguishr.svc.cluster.local:4318
             - name: OTEL_DEPLOYMENT_ENVIRONMENT
               value: k8s
+            # Auth.js rejects requests whose Host doesn't match what it
+            # trusts by default — fine on Vercel (inherently trusted), but
+            # self-hosted behind a reverse proxy (Traefik here) the pod only
+            # sees its own internal 0.0.0.0:3000, not the real public host.
+            # This tells Auth.js to trust Traefik's X-Forwarded-* headers
+            # instead. See https://errors.authjs.dev#untrustedhost.
+            - name: AUTH_TRUST_HOST
+              value: "true"
           resources:
             requests:
               cpu: 100m

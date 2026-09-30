@@ -466,3 +466,37 @@ be a variable while debugging the migration itself.
   plumbing they depend on works.
 - Jaeger's UI (port 16686) is intentionally not exposed via the Ingress — view it with
   `kubectl port-forward svc/jaeger -n idistinguishr 16686:16686`, documented in `docs/tracing.md`.
+
+### Real test booking — manual span confirmed, and a real auth bug caught
+
+- Used the seeded demo student account (`alex.turner.demo@example.com`, from `prisma/seed.ts` —
+  synthetic test data with its password committed in plaintext in the repo, not a real credential) to
+  log in and do an actual booking through the live UI, specifically to fire the manual spans.
+- **First login attempt failed** with a generic "Server error" page. Pod logs showed the real cause:
+  Auth.js `UntrustedHost` — `URL was: https://0.0.0.0:3000/api/auth/providers`. This is a genuine,
+  previously-uncaught bug: Auth.js only trusts a request's `Host` by default, but behind Traefik the pod
+  only ever sees its own internal `0.0.0.0:3000`, not the real public hostname. This never surfaced on
+  Vercel, since Vercel's own infrastructure is inherently trusted — it's specifically a self-hosting
+  gotcha. **Fixed** by adding `AUTH_TRUST_HOST=true` to `k8s/deployment.yaml` (tells Auth.js to trust
+  Traefik's `X-Forwarded-*` headers) and applying it directly to the cluster (no image rebuild needed,
+  just an env var) — login worked immediately after. This is exactly the kind of thing
+  `docs/k8s-deploy.md`'s "verify auth" step before cutover exists to catch, caught for real this time.
+- With login fixed, booked a real lesson with Tomasz Nowak (seeded teacher) for today, 17:00, 60 min —
+  the booking succeeded (`POST /api/bookings` → `201`, real booking ID
+  `a340fd7e-77de-4237-8df8-59a4a8aca80e`).
+- **Confirmed in Jaeger**: the `booking.soft_hold_transaction` manual span fired with exactly the
+  attributes coded — `booking.id`, `booking.teacher_id`, `booking.date`, `booking.start_time`,
+  `booking.duration_minutes`, `booking.expired_holds_released` all present and correct, matching the
+  real booking.
+- Checkout itself ("Confirm & Pay") failed client-side ("Couldn't start checkout — try again"), no
+  server-side error logged in that window — likely the seeded teacher's `stripeAccountId` isn't a valid
+  Connect account under whichever Stripe key ended up in the k8s Secret. Not chased further right now:
+  it's a separate, pre-existing concern from the Stripe/payments side, not a k8s or tracing issue, and
+  full checkout+webhook verification was already explicitly gated behind DNS cutover (the webhook can't
+  reach this deployment until then regardless) per Part 4's plan.
+- **`stripe_webhook.handle` remains unverified** for the same reason as before — no real Stripe webhook
+  has hit this deployment yet. Will confirm naturally once DNS is cut over and a real webhook (or the
+  Stripe CLI's `stripe listen --forward-to`) reaches it.
+- **Part 5 is effectively complete**: both the OTel plumbing (auto-instrumentation, resource attributes,
+  Jaeger ingestion) and one of the two manual spans are now confirmed working against real, live traffic
+  — not just deployed and assumed correct.
