@@ -29,6 +29,14 @@ spec:
           envFrom:
             - secretRef:
                 name: idistinguishr-secrets
+          env:
+            # Jaeger's OTLP HTTP receiver, in the same namespace — see
+            # k8s/jaeger.yaml. src/instrumentation.ts's OTLPTraceExporter
+            # appends /v1/traces itself.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger.idistinguishr.svc.cluster.local:4318
+            - name: OTEL_DEPLOYMENT_ENVIRONMENT
+              value: k8s
           resources:
             requests:
               cpu: 100m

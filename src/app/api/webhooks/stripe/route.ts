@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Prisma } from "@prisma/client";
+import { Span, SpanStatusCode } from "@opentelemetry/api";
 import { prisma } from "@/lib/prisma";
 import { stripe, platformFeeForAmount } from "@/lib/stripe";
+import { tracer } from "@/lib/tracer";
 import {
   sendBookingConfirmationEmail,
   sendTeacherReviewNeededEmail,
@@ -87,6 +89,20 @@ async function syncStripeAccountStatus(accountId: string) {
 }
 
 export async function POST(req: Request) {
+  return tracer.startActiveSpan("stripe_webhook.handle", async (span) => {
+    try {
+      return await handleStripeWebhook(req, span);
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+async function handleStripeWebhook(req: Request, span: Span) {
   const signature = req.headers.get("stripe-signature");
   // stripe listen relays both event types through one local tunnel and
   // prints a single secret, but real endpoints each get their own signing
@@ -137,6 +153,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
     }
 
+    span.setAttribute("stripe.event_kind", "thin");
+    span.setAttribute("stripe.event_type", notification.type);
+
     if (THIN_ACCOUNT_NOTIFICATION_TYPES.includes(notification.type) && "related_object" in notification) {
       const accountId = notification.related_object?.id;
       if (accountId) await syncStripeAccountStatus(accountId);
@@ -152,6 +171,10 @@ export async function POST(req: Request) {
     await sendWebhookVerificationFailedAlert({ path: "classic", reason: message });
     return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
   }
+
+  span.setAttribute("stripe.event_kind", "classic");
+  span.setAttribute("stripe.event_type", event.type);
+  span.setAttribute("stripe.event_id", event.id);
 
   switch (event.type) {
     case "account.updated": {
@@ -180,20 +203,32 @@ export async function POST(req: Request) {
         typeof checkoutSession.payment_intent === "string" ? checkoutSession.payment_intent : null;
 
       try {
-        await prisma.$transaction([
-          prisma.booking.update({ where: { id: booking.id }, data: { status: "CONFIRMED" } }),
-          prisma.payment.create({
-            data: {
-              bookingId: booking.id,
-              amountMinorUnits: amount,
-              currency: (checkoutSession.currency ?? "gbp").toUpperCase(),
-              stripePaymentIntentId: paymentIntentId ?? "",
-              platformFeeMinorUnits: platformFee,
-              teacherPayoutMinorUnits: amount - platformFee,
-              status: "SUCCEEDED",
-            },
-          }),
-        ]);
+        await tracer.startActiveSpan("stripe_webhook.confirm_booking", async (confirmSpan) => {
+          confirmSpan.setAttribute("booking.id", booking.id);
+          confirmSpan.setAttribute("payment.amount_minor_units", amount);
+          try {
+            await prisma.$transaction([
+              prisma.booking.update({ where: { id: booking.id }, data: { status: "CONFIRMED" } }),
+              prisma.payment.create({
+                data: {
+                  bookingId: booking.id,
+                  amountMinorUnits: amount,
+                  currency: (checkoutSession.currency ?? "gbp").toUpperCase(),
+                  stripePaymentIntentId: paymentIntentId ?? "",
+                  platformFeeMinorUnits: platformFee,
+                  teacherPayoutMinorUnits: amount - platformFee,
+                  status: "SUCCEEDED",
+                },
+              }),
+            ]);
+          } catch (err) {
+            confirmSpan.recordException(err as Error);
+            confirmSpan.setStatus({ code: SpanStatusCode.ERROR });
+            throw err;
+          } finally {
+            confirmSpan.end();
+          }
+        });
       } catch (err) {
         // Stripe retries webhook delivery — a unique-constraint hit on
         // Payment.bookingId just means we already processed this one.

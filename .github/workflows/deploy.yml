@@ -102,9 +102,12 @@ jobs:
           kubectl apply -f k8s/migration-job.yaml
           kubectl wait --for=condition=complete job/idistinguishr-migrate -n idistinguishr --timeout=180s
 
+      # Applies the full manifest (with the image tag substituted), not just
+      # `kubectl set image` — that way, manifest-level changes committed to
+      # k8s/deployment.yaml (env vars, resources, probes, ...) actually reach
+      # the cluster on every release, not just image bumps.
       - name: Roll deployment to the new image
         run: |
-          kubectl set image deployment/idistinguishr \
-            idistinguishr=${{ needs.build-and-push.outputs.image }}:${{ needs.build-and-push.outputs.tag }} \
-            -n idistinguishr
+          sed "s|image: ${{ needs.build-and-push.outputs.image }}:.*|image: ${{ needs.build-and-push.outputs.image }}:${{ needs.build-and-push.outputs.tag }}|" \
+            k8s/deployment.yaml | kubectl apply -f -
           kubectl rollout status deployment/idistinguishr -n idistinguishr --timeout=180s

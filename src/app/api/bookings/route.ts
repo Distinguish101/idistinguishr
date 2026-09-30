@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { SpanStatusCode } from "@opentelemetry/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { tracer } from "@/lib/tracer";
 import { getBookableSlots, HOLD_EXPIRY_MINUTES } from "@/lib/booking-slots";
 
 // Creates the "soft hold" (US-32/US-33): a PENDING_PAYMENT booking that
@@ -69,29 +71,46 @@ export async function POST(req: Request) {
   const holdCutoff = new Date(Date.now() - HOLD_EXPIRY_MINUTES * 60_000);
 
   try {
-    const booking = await prisma.$transaction(async (tx) => {
-      await tx.booking.updateMany({
-        where: {
-          teacherId,
-          lessonDate,
-          startTime,
-          status: "PENDING_PAYMENT",
-          createdAt: { lt: holdCutoff },
-        },
-        data: { status: "CANCELLED", cancelledBy: "SYSTEM", cancelledAt: new Date() },
-      });
+    const booking = await tracer.startActiveSpan("booking.soft_hold_transaction", async (span) => {
+      span.setAttribute("booking.teacher_id", teacherId);
+      span.setAttribute("booking.date", date);
+      span.setAttribute("booking.start_time", startTime);
+      span.setAttribute("booking.duration_minutes", durationMinutes);
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          const expired = await tx.booking.updateMany({
+            where: {
+              teacherId,
+              lessonDate,
+              startTime,
+              status: "PENDING_PAYMENT",
+              createdAt: { lt: holdCutoff },
+            },
+            data: { status: "CANCELLED", cancelledBy: "SYSTEM", cancelledAt: new Date() },
+          });
+          span.setAttribute("booking.expired_holds_released", expired.count);
 
-      return tx.booking.create({
-        data: {
-          studentId: session.user.id,
-          teacherId,
-          lessonDate,
-          startTime,
-          durationMinutes,
-          format,
-          priceTotalMinorUnits,
-        },
-      });
+          return tx.booking.create({
+            data: {
+              studentId: session.user.id,
+              teacherId,
+              lessonDate,
+              startTime,
+              durationMinutes,
+              format,
+              priceTotalMinorUnits,
+            },
+          });
+        });
+        span.setAttribute("booking.id", result.id);
+        return result;
+      } catch (err) {
+        span.recordException(err as Error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw err;
+      } finally {
+        span.end();
+      }
     });
 
     return NextResponse.json({ booking }, { status: 201 });

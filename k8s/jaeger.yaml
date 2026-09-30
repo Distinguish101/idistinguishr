@@ -1,0 +1,105 @@
+# Jaeger, all-in-one mode with Badger storage (an embedded on-disk key/value
+# store) — deliberately not a separate Elasticsearch/Cassandra-backed
+# deployment, which would be disproportionate infrastructure for this app's
+# scale. Runs as just another workload in this same cluster, per the brief.
+#
+# Badger data persists to a PersistentVolumeClaim backed by k3s's bundled
+# local-path-provisioner, so traces survive pod restarts (not just
+# BADGER_EPHEMERAL, which would wipe them on every restart).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jaeger-badger-data
+  namespace: idistinguishr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: idistinguishr
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  strategy:
+    # Badger locks its data directory to a single writer — a second pod
+    # starting before the first terminates (the default RollingUpdate
+    # behavior) would fail to acquire the lock. Recreate avoids that.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.62.0
+          env:
+            - name: SPAN_STORAGE_TYPE
+              value: badger
+            - name: BADGER_EPHEMERAL
+              value: "false"
+            - name: BADGER_DIRECTORY_VALUE
+              value: /badger/data
+            - name: BADGER_DIRECTORY_KEY
+              value: /badger/key
+          ports:
+            - name: ui
+              containerPort: 16686
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          volumeMounts:
+            - name: badger-data
+              mountPath: /badger
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 16686
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: badger-data
+          persistentVolumeClaim:
+            claimName: jaeger-badger-data
+---
+# ClusterIP: the app sends traces here via OTEL_EXPORTER_OTLP_ENDPOINT (see
+# k8s/deployment.yaml). The UI (port 16686) is intentionally not exposed
+# through the Ingress — view it with:
+#   kubectl port-forward svc/jaeger -n idistinguishr 16686:16686
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: idistinguishr
+spec:
+  type: ClusterIP
+  selector:
+    app: jaeger
+  ports:
+    - name: ui
+      port: 16686
+      targetPort: 16686
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
