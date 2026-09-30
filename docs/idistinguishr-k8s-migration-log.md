@@ -404,3 +404,65 @@ Per the brief, flagging these clearly rather than attempting to work around them
   doesn't have on its own.
 - No code or manifest changes in this session — purely manual verification. Noting it here since the
   user specifically asked whether the log was being kept current throughout.
+
+## Part 5: OpenTelemetry + Jaeger
+
+Started only after Part 4 was fully verified stable, per the brief's sequencing — no tracing bug could
+be a variable while debugging the migration itself.
+
+- Added `@vercel/otel`, `@opentelemetry/api`, and `@opentelemetry/exporter-trace-otlp-http`. Created
+  `src/instrumentation.ts` (Next's sanctioned hook, runs once on server start) registering OTel with
+  `service.name: idistinguishr` and a `deployment.environment` resource attribute (set to `k8s` via env
+  var in the cluster, defaults to `development` locally) so traces from different environments don't mix
+  in the Jaeger UI.
+- Added manual spans around the two highest-value paths, per the brief:
+  - `booking.soft_hold_transaction` in `POST /api/bookings` — wraps the existing transaction, adds
+    attributes for teacher/date/time/duration, how many expired holds got released, and the resulting
+    booking ID.
+  - `stripe_webhook.handle` wrapping the whole webhook handler in
+    `src/app/api/webhooks/stripe/route.ts` (required extracting the existing logic into a helper
+    function so a single span could wrap all of its early-return branches), plus a nested
+    `stripe_webhook.confirm_booking` span around the booking-confirm + payment-record transaction
+    specifically. Both record exceptions and set an error span status on failure.
+- **Local Jaeger container testing (the brief's suggested first step) was blocked**: Docker Desktop
+  crashed with a stale-socket error (`sailor-ingest.sock` — a low-level Windows file lock, same class of
+  issue a restart fixed for WSL2 earlier in this migration) and wouldn't restart cleanly. User chose to
+  skip the restart and verify directly on the cluster instead, which arguably exercises the real
+  `OTEL_EXPORTER_OTLP_ENDPOINT` wiring more faithfully than local dev's implicit localhost default would
+  have anyway.
+- **Found and fixed a real CI/CD gap while wiring this up**: the deploy workflow only ever ran
+  `kubectl set image`, which patches just the image tag — any other manifest change (like the new OTel
+  env vars just added to `k8s/deployment.yaml`) would never have reached the cluster automatically on a
+  normal push. Changed the "Roll deployment" step to apply the full `deployment.yaml` (with the tag
+  substituted via `sed`, same pattern already used for the ingress domain swap) instead. This is a
+  genuine improvement independent of tracing — it means manifest changes in general now actually take
+  effect via CI going forward.
+- Deployed `k8s/jaeger.yaml`: all-in-one mode, Badger storage backed by a 2Gi `PersistentVolumeClaim`
+  (via k3s's bundled `local-path-provisioner`) so traces survive pod restarts — not a separate
+  Elasticsearch/Cassandra deployment, per the brief. `strategy: Recreate` (not the default
+  `RollingUpdate`) since Badger locks its data directory to a single writer. **Came up `Running` on the
+  first attempt.**
+- Pushed the app changes; CI's multi-arch build took ~10 minutes this time (slower than the earlier
+  ~5-6 minutes, likely the extra OTel dependencies plus normal QEMU arm64-emulation variance) — confirmed
+  via the Actions UI it was genuinely progressing (not stuck) partway through by watching the build log
+  timestamps advance. Also hit GitHub's unauthenticated REST API rate limit (60 requests/hour) from the
+  cumulative polling done across this whole session; switched to polling the cluster directly (no rate
+  limit, and arguably more authoritative anyway) and to checking the Actions **web UI** (not subject to
+  the same API rate limit) when a human-readable view was more useful.
+- **Deployed and verified end-to-end on the live cluster**: new image (`b2df6a1dfac2`) rolled out
+  cleanly with the OTel env vars present, migration Job re-ran clean (no pending migrations, as
+  expected). Generated real traffic against the live sslip.io URL, then queried Jaeger's API directly
+  (via `kubectl port-forward`) and confirmed:
+  - `GET /api/services` → `idistinguishr` is a known service.
+  - Real traces present with `deployment.environment: k8s` correctly set on every span.
+  - Auto-instrumentation spans for `GET /`, `GET /results`, and `GET /api/health` (the latter dominating
+    recent traces due to liveness/readiness probe frequency — 2 pods × every ~10-15s) all confirmed via
+    `GET /api/operations`.
+- **Not yet verified**: the two manual spans specifically (`booking.soft_hold_transaction`,
+  `stripe_webhook.handle`) haven't fired yet, since neither a real authenticated booking nor a real
+  Stripe event has hit the k8s deployment — the Stripe webhook isn't pointed at it yet (that only
+  happens at DNS cutover). These will show up naturally once either happens; the code path itself
+  compiled and deployed cleanly, and the surrounding auto-instrumentation proves the tracer/exporter
+  plumbing they depend on works.
+- Jaeger's UI (port 16686) is intentionally not exposed via the Ingress — view it with
+  `kubectl port-forward svc/jaeger -n idistinguishr 16686:16686`, documented in `docs/tracing.md`.
