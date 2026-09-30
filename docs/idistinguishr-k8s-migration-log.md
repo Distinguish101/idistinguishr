@@ -351,3 +351,39 @@ Per the brief, flagging these clearly rather than attempting to work around them
   still has `REPLACE_WITH_DOMAIN` placeholders), DNS, and the Stripe webhook/Google OAuth callback
   updates that only make sense once a domain exists. The Vercel deployment remains completely untouched
   and is still the live production site.
+
+### Free end-to-end verification with sslip.io, before buying a real domain
+
+- User is cash-constrained, so before spending on a real domain, verified the entire
+  ingress/TLS/cert-manager chain for free using **sslip.io** (a public DNS service where any hostname
+  containing an IP, e.g. `<name>.<ip-with-dashes>.sslip.io`, resolves to that IP — no signup, works
+  instantly). Checked `idistinguishr.com`'s availability at Namecheap as a for-later reference (~$13-15/yr
+  retail there; Cloudflare Registrar's wholesale price, the user's preferred registrar, should be a bit
+  less) — not purchased, since domain purchase needs the user's own payment details, which stays outside
+  this session's scope.
+- **Found a real DNS quirk while testing sslip.io formats**: the dotted form
+  (`144.21.58.215.sslip.io`) resolved incorrectly to an unrelated IP (`45.60.87.84`) through this
+  network's resolver, while the dashed form (`144-21-58-215.sslip.io`, and with a hostname prefix,
+  `idistinguishr.144-21-58-215.sslip.io`) resolved correctly. Used the working dashed form throughout.
+- Applied `k8s/ingress.yaml` with `REPLACE_WITH_DOMAIN` substituted to
+  `idistinguishr.144-21-58-215.sslip.io` via a one-off `sed | kubectl apply -f -` **without modifying
+  the tracked file** — this is a throwaway verification domain, not the eventual real one, so the
+  placeholder stays in git for whenever the real domain is bought.
+- **Certificate issued successfully on the first attempt**: cert-manager's HTTP-01 challenge against
+  Let's Encrypt's production ACME server completed within ~15 seconds (`Certificate READY: True`,
+  challenge resource auto-cleaned after completing).
+- **Full external verification, all passing**:
+  - `GET https://idistinguishr.144-21-58-215.sslip.io/api/health` → `200 {"status":"ok"}`
+  - `GET https://idistinguishr.144-21-58-215.sslip.io/api/health?ready=1` → `200 {"status":"ok"}` —
+    confirms the real database is reachable over the public HTTPS endpoint, not just from inside the
+    cluster.
+  - `GET http://...` (plain HTTP) → `301` redirect to the `https://` equivalent — confirms the Traefik
+    `redirectScheme` Middleware from the ingress-controller switch works correctly.
+  - Certificate details confirmed genuine: issuer `Let's Encrypt`, CN matches the sslip.io hostname,
+    90-day validity window.
+- **This proves the entire remaining pipeline works** — Traefik ingress, cert-manager/Let's Encrypt,
+  the Service, the Deployment's pods, and the real Neon database are all correctly wired together. The
+  only thing left before a real cutover is swapping this throwaway sslip.io hostname for a real
+  purchased domain (same `kubectl apply` process, now proven) and the DNS/Stripe/Google OAuth updates
+  that go with an actual domain. Left the sslip.io ingress running on the cluster — harmless, costs
+  nothing, and gives a real working HTTPS URL to poke at in the meantime.
