@@ -55,7 +55,12 @@ export async function GET(req: Request) {
     });
   }
 
-  const origin = new URL(req.url).origin;
+  // Not new URL(req.url).origin: behind Traefik the Node process only ever
+  // sees its own internal bind address (0.0.0.0:3000), so that resolves to
+  // an unreachable origin instead of the real public domain. Same class of
+  // bug as the AUTH_TRUST_HOST issue — see src/lib/email.ts for the
+  // existing SITE_URL precedent.
+  const origin = process.env.SITE_URL ?? "https://idistinguishr.vercel.app";
   const accountLink = await stripe.v2.core.accountLinks.create({
     account: accountId,
     use_case: {
