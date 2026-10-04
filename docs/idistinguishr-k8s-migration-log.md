@@ -565,3 +565,36 @@ be a variable while debugging the migration itself.
 - Cleaned up: killed the background log tail; the extra test booking
   (`9270594e-0b60-45c0-bc5a-234d11d405cf`) was left as-is (harmless `PENDING_PAYMENT` row against the
   same seeded data, no real payment attempted).
+
+### Stripe fix, part 1: corrected the key, surfaced the real second bug
+
+- User retrieved the correct **test-mode** secret key from `dashboard.stripe.com` (test mode toggled on,
+  Developers → API keys → reveal test key) and pasted it into a minimal one-field patch file opened in
+  Notepad — not the full `k8s/secret.yaml` template, specifically so the other 10 already-working secret
+  values didn't need to be re-typed from scratch again (direct continuation of the earlier
+  "stop making me refill everytime" workflow change). Applied with `kubectl patch secret
+  idistinguishr-secrets -n idistinguishr --type=merge --patch-file=...` — a merge patch only touches the
+  field(s) named in the patch, unlike `kubectl apply` which would have three-way-merged against the
+  original full `secret.yaml`'s last-applied-configuration and deleted the other 10 keys. Confirmed all
+  11 keys still present by name afterward (values never read). Deleted the local patch file immediately
+  after applying it.
+- Restarted the app Deployment (`kubectl rollout restart`) so both pods picked up the new key via a fresh
+  Stripe client, then reproduced the checkout flow again (same seeded account, same pending booking),
+  tailing logs again to see the result in real time.
+- **Key is now correct — confirmed by the error changing** from a 401 authentication failure to a 400
+  `StripeInvalidRequestError`: `"No such destination: 'acct_1U2Ay8GnMYAiEkST'"`, `code:
+  'resource_missing'`. The error's own `request_log_url` field (Stripe's standard, non-sensitive output —
+  just a dashboard link, not a credential) confirmed the request was authenticated as platform account
+  `acct_1U12QDKIMdaE5goz`.
+- **This confirms the second, deeper bug originally suspected**: `prisma/seed.ts`'s hardcoded
+  `stripeAccountId` values (e.g. `acct_1U2Ay8GnMYAiEkST` for Tomasz Nowak) are real Stripe Connect
+  accounts, but they were created under whichever Stripe test account the original developer used when
+  writing the seed script — not this project's actual Stripe platform account
+  (`acct_1U12QDKIMdaE5goz`). Connect accounts only exist under the specific platform account that created
+  them, so no key fix alone could ever have made these particular seeded IDs work. `seed.ts`'s own
+  comment already flags the fix: re-run Stripe Connect onboarding for a teacher via their profile's
+  Payouts section to get a fresh account tied to the real platform account.
+- **Not a k8s or tracing bug, and not fully resolved yet** — it's pre-existing seed/Stripe-account data
+  that would have hit the same wall on Vercel too. Flagging clearly rather than proceeding further without
+  checking in, since re-onboarding a Connect account goes through Stripe's hosted flow and is a bigger,
+  separate step from "check the key."
