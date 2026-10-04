@@ -647,3 +647,68 @@ be a variable while debugging the migration itself.
   (which will also resolve the `stripeOnboardingComplete`/`stripe_webhook.handle` items above), updating
   the Google OAuth callback URL if used, and a final full verification pass (login, a real booking, a
   real payment) against the real domain before cutover is actually complete.
+
+### Stripe webhook registered against the real domain — and a second real bug found
+
+- Set this up by driving Stripe's dashboard directly (Workbench → Webhooks → "Add destination" — Stripe's
+  newer UI calls classic webhook endpoints "event destinations" now). Checked the existing production
+  destination (`https://idistinguishr.vercel.app/api/webhooks/stripe`) first to replicate its exact
+  config rather than guess: scope **"Your account"**, payload style **Snapshot**, events
+  `checkout.session.completed` + `account.updated`. Left that Vercel destination completely untouched.
+- Selecting events for the new destination surfaced that Stripe's wizard **automatically splits Snapshot
+  and Thin payload-style events into two separate destinations** — this lines up exactly with
+  `src/app/api/webhooks/stripe/route.ts`'s existing dual-secret design (`STRIPE_WEBHOOK_SECRET` for
+  classic events, `STRIPE_THIN_WEBHOOK_SECRET` for v2 thin events, with a documented fallback to the
+  classic secret if the thin one isn't set). Created both, both pointed at
+  `https://idistinguishr.com/api/webhooks/stripe`:
+  - `checkout.session.completed` + `account.updated` (Snapshot)
+  - `v2.core.account.updated` + `v2.core.account[configuration.recipient].capability_status_updated`
+    (Thin) — broader coverage than the Vercel destination's classic-only `account.updated`, since the
+    code explicitly supports the v2 path too.
+- **Signing secrets handled without ever typing or viewing them in chat**: Stripe reveals a freshly
+  created destination's secret unmasked once, with no "hide" step first. Rather than transcribe it,
+  clicked Stripe's own copy-to-clipboard button for each one and had a PowerShell one-liner
+  (`Get-Clipboard`) write it straight into a one-off local patch file, which was then applied via
+  `kubectl patch secret ... --type=merge` (touches only the named key, confirmed by re-checking the full
+  key list — all 10 existing keys plus the 2 new ones, 12 total) and deleted immediately after. Cleared
+  the OS clipboard afterward too.
+- **Verified via Stripe's embedded Workbench Shell** (a browser-based `stripe` CLI, no local install
+  needed): `stripe trigger checkout.session.completed` → delivery showed **200 OK, Delivered** on the new
+  Snapshot destination. Confirmed in Jaeger too — after a few more trigger runs to beat the 10% trace
+  sampling rate, two `stripe_webhook.handle` spans showed up with correct attributes
+  (`stripe.event_kind: classic`, `stripe.event_type: checkout.session.completed`, a real `stripe.event_id`).
+  **This closes out the last open item from Part 5** — both manual spans
+  (`booking.soft_hold_transaction`, `stripe_webhook.handle`) are now confirmed firing correctly against
+  real traffic. (The nested `stripe_webhook.confirm_booking` span correctly did not fire for these —
+  they're synthetic CLI fixtures with no real matching `bookingId`, exactly per the handler's own
+  early-return guards.)
+- **Found a second real, previously-unknown bug while testing this**, the same class as the earlier
+  `AUTH_TRUST_HOST` issue: clicked "Finish Stripe onboarding" on the teacher profile page for real, and
+  Stripe's `return_url` redirect landed on `https://0.0.0.0:3000/teacher/profile` — unreachable from a
+  browser. Root cause: both `src/app/api/stripe/connect/route.ts` and `src/app/api/checkout/session/route.ts`
+  computed their redirect origin via `new URL(req.url).origin`, which behind Traefik reflects the pod's
+  own internal bind address, not the public domain. **This would have broken real Stripe Checkout's
+  `success_url`/`cancel_url` too** — not just Connect onboarding — since both routes shared the same
+  buggy pattern. Fixed by switching both to `process.env.SITE_URL` (with the same fallback already used
+  in `src/lib/email.ts`), committed (`a3705c0`), and verified the fix for real: re-ran the onboarding
+  round-trip and the redirect landed correctly on `https://idistinguishr.com/teacher/profile` this time.
+- **Also caught and fixed**: `SITE_URL` in the live k8s Secret was still the Vercel URL, carried over
+  from the original migration (`k8s/secret.yaml`'s placeholder happened to already be the real Vercel
+  value, so it was never re-typed). Patched it directly to `https://idistinguishr.com` — unlike the other
+  secrets, `SITE_URL` isn't sensitive (it's the site's own public address), so this one didn't need the
+  Notepad hand-off workflow.
+- **One known, accepted gap**: the demo teacher's (Tomasz Nowak) `stripeOnboardingComplete` flag still
+  reads `false`. Its one real `v2.core.account[configuration.recipient].capability_status_updated` event
+  fired *before* this webhook destination existed, so it was never delivered — and Stripe's v2 thin
+  events don't support manual resend/replay from the dashboard (confirmed: no such action exists on an
+  event's detail page, unlike classic v1 events). Re-confirming the already-complete onboarding doesn't
+  re-emit the event either, since nothing about the account's capability actually changed. This is a
+  one-time quirk of this specific seeded demo record's timing, not a gap in the webhook pipeline itself —
+  any teacher who completes onboarding *from now on* will sync correctly, which is the behavior that
+  actually matters.
+- Stripe Connect account housekeeping, for context: earlier in this same investigation, the teacher's
+  originally-seeded `stripeAccountId` (belonging to a different Stripe platform account) was cleared via
+  Neon's SQL console by the user directly (a `kubectl exec` attempt to do this from this session was
+  correctly blocked as an unreviewed production-DB write), then a fresh, correctly-scoped Connect account
+  (`acct_1UMoUpKIMdMPt8mP`) was created via the app's own `/api/stripe/connect` route and onboarded with
+  Stripe's synthetic test data.
