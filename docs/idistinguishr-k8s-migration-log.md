@@ -598,3 +598,52 @@ be a variable while debugging the migration itself.
   that would have hit the same wall on Vercel too. Flagging clearly rather than proceeding further without
   checking in, since re-onboarding a Connect account goes through Stripe's hosted flow and is a bigger,
   separate step from "check the key."
+
+### Stripe fix, part 2: fresh Connect account created for the demo teacher
+
+- User cleared the mismatched `stripeAccountId` for Tomasz Nowak themselves via Neon's SQL console
+  (`UPDATE "teacher_profiles" SET "stripeAccountId" = NULL, "stripeOnboardingComplete" = false WHERE
+  "userId" = (SELECT id FROM "users" WHERE email = 'tomasz.nowak.teach@example.com')`) — an earlier
+  attempt to do this from this session via `kubectl exec` (a one-off Node script run inside a pod to
+  patch the row directly) was correctly blocked by this session's own safety controls as an unreviewed
+  write against the live production database; the user running it themselves in Neon's own console was
+  the right call, not a workaround.
+- With `stripeAccountId` cleared, `/teacher/profile` correctly switched from "Stripe is connected" to a
+  "Connect payouts with Stripe" button (`src/app/teacher/profile/page.tsx`'s existing conditional logic,
+  unchanged). Clicked it: `/api/stripe/connect` created a **brand-new Connect account** (since
+  `profile.stripeAccountId` was now null, hitting the `stripe.v2.core.accounts.create(...)` branch) and
+  redirected to Stripe's hosted onboarding — confirms the account now genuinely belongs to this project's
+  real platform account, unlike the seeded one.
+- **Deliberately stopped before completing Stripe's hosted onboarding form** — that page runs on
+  `connect.stripe.com`, not this project's own (non-localhost) deployment, so entering even synthetic
+  test identity/bank data there falls outside what this session does on the user's behalf. User completed
+  it themselves (Stripe's "Use test phone number" one-click shortcut for test-mode accounts).
+- **Found the full picture while checking why `stripeOnboardingComplete` still read false afterward**:
+  that flag only flips via a `v2.core.account.updated`/`account[configuration.recipient].capability_status_updated`
+  webhook from Stripe (`syncStripeAccountStatus` in `src/app/api/webhooks/stripe/route.ts`), not from the
+  hosted onboarding UI directly — and no webhook endpoint has ever been registered against this
+  deployment. This is the same long-standing "not yet verified" item for `stripe_webhook.handle`.
+
+### Real domain cutover: idistinguishr.com is live
+
+- User purchased `idistinguishr.com` via Cloudflare Registrar (payment is user-only, out of this
+  session's scope, same as every other financial action in this migration).
+- Added the DNS record via the Cloudflare dashboard (driven through the Claude in Chrome browser
+  extension, user logged in themselves — never this session): `A idistinguishr.com -> 144.21.58.215`,
+  **DNS only** (proxy off), not proxied through Cloudflare's edge — deliberately matching the direct,
+  already-verified origin setup from the sslip.io test rather than introducing a new intermediary at
+  cutover time.
+- Swapped `k8s/ingress.yaml`'s `REPLACE_WITH_DOMAIN` placeholder for `idistinguishr.com` (the real
+  tracked file this time, not a throwaway `sed` substitution) and applied it.
+- **cert-manager picked up the host change automatically** and issued a fresh Let's Encrypt certificate
+  within seconds — `Certificate READY: True`, same HTTP-01 flow already proven against sslip.io, now
+  against the real domain. DNS had already propagated enough for the challenge to succeed on the first
+  attempt (checked via `nslookup idistinguishr.com 1.1.1.1` beforehand).
+- **Verified live**: `GET https://idistinguishr.com/api/health` → `200`, `GET
+  https://idistinguishr.com/api/health?ready=1` → `200` (real DB reachable), `GET
+  http://idistinguishr.com/api/health` → `308` redirect to the `https://` equivalent.
+- **idistinguishr.com is now genuinely serving the k8s deployment.** What's still outstanding before
+  Vercel can be considered safe to retire: registering the Stripe webhook endpoint against this domain
+  (which will also resolve the `stripeOnboardingComplete`/`stripe_webhook.handle` items above), updating
+  the Google OAuth callback URL if used, and a final full verification pass (login, a real booking, a
+  real payment) against the real domain before cutover is actually complete.
