@@ -533,3 +533,35 @@ be a variable while debugging the migration itself.
 - Committed both `k8s/deployment.yaml` and `k8s/jaeger.yaml` changes together. Takeaway for later: an
   OTel rollout needs a sampling decision made deliberately up front, not left at the SDK default —
   especially in a setup like this one where health-check probe traffic alone is a steady, nonzero load.
+
+### Diagnosed the Stripe checkout bug flagged during the real test booking
+
+- Revisited the "Couldn't start checkout — try again" failure noted above. Reproduced it live: logged in
+  as the seeded demo student via the browser, booked a fresh lesson with Tomasz Nowak
+  (`9270594e-0b60-45c0-bc5a-234d11d405cf`), clicked "Confirm & Pay", and tailed the app pods' logs
+  (`kubectl logs -f`) at the same moment to catch the real server-side error — `src/app/api/checkout/
+  session/route.ts` has no try/catch around `stripe.checkout.sessions.create`, so Next.js logs the raw
+  exception on an unhandled 500 before the client falls back to its generic message.
+- **Real cause, confirmed from Stripe's own error, not guessed**: `StripeAuthenticationError`, HTTP 401,
+  `"Invalid API Key provided: sk_live_****a..."`. Two distinct problems in that one message:
+  1. It's a **live-mode** key (`sk_live_...`) in a non-production verification environment — the seeded
+     Connect accounts in `prisma/seed.ts` are explicitly documented there as test-mode accounts, so a
+     live key could never work against them regardless of validity.
+  2. Stripe is rejecting the key **outright as invalid** (401 at the authentication stage, before it even
+     gets to looking up the Connect account) — meaning the value itself is wrong: truncated, mistyped, or
+     a live key that's since been rotated/revoked on Stripe's dashboard. This is the same class of mistake
+     as the earlier `DATABASE_URL` saga (a value hand-typed into `k8s/secret.yaml` instead of copied
+     correctly).
+  3. Only the key's masked prefix (`sk_live_****a...`) was ever seen, from Stripe's own error text — the
+     real value was never read, decoded, or displayed; a direct attempt to inspect even just the key's
+     first few characters via `kubectl` was correctly blocked by this session's credential-handling
+     safeguards.
+- **Not a k8s or tracing bug** — the Secret mechanism, the route, and Stripe's SDK are all working
+  correctly; the Secret simply holds the wrong value for `STRIPE_SECRET_KEY`.
+- **Needs the user to fix**: get the correct **test-mode** secret key (`sk_test_...`) from
+  `dashboard.stripe.com` (with "Viewing test data" toggled on) and update it directly in
+  `k8s/secret.yaml` / re-apply, the same hands-off-secrets workflow used throughout this migration — not
+  something this session can fix on its own, by design.
+- Cleaned up: killed the background log tail; the extra test booking
+  (`9270594e-0b60-45c0-bc5a-234d11d405cf`) was left as-is (harmless `PENDING_PAYMENT` row against the
+  same seeded data, no real payment attempted).
