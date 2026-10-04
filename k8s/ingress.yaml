@@ -25,10 +25,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - REPLACE_WITH_DOMAIN # e.g. idistinguishr.example.com — see docs/k8s-deploy.md
+        - idistinguishr.com
       secretName: idistinguishr-tls
   rules:
-    - host: REPLACE_WITH_DOMAIN
+    - host: idistinguishr.com
       http:
         paths:
           - path: /
