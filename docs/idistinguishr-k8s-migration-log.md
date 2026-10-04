@@ -712,3 +712,37 @@ be a variable while debugging the migration itself.
   correctly blocked as an unreviewed production-DB write), then a fresh, correctly-scoped Connect account
   (`acct_1UMoUpKIMdMPt8mP`) was created via the app's own `/api/stripe/connect` route and onboarded with
   Stripe's synthetic test data.
+
+### Final full live verification pass — real login, real booking, real payment, all on the real domain
+
+- Checked whether the Google OAuth callback URL needed updating for cutover (a planned pre-retirement
+  step from the brief): it doesn't. `src/lib/auth.ts` documents that Google sign-in was never fully wired
+  (the Prisma schema is missing the Account/Session/VerificationToken models the adapter needs), and
+  `/auth` only renders the Google button when `GOOGLE_CLIENT_ID` is set — confirmed absent on **both**
+  the live Vercel site and the k8s deployment (no Google button on either). Nothing to update.
+- One more gap surfaced and fixed en route: unblocking the demo teacher's booking required
+  `stripeOnboardingComplete = true` (bookability is gated on `approvalStatus == APPROVED &&
+  stripeOnboardingComplete == true`) — the user ran one more Neon SQL update to set it, justified since
+  Stripe's own dashboard had already confirmed the account is genuinely fully onboarded; the flag was
+  only stale because of the earlier webhook-timing gap, not because anything was actually wrong.
+- Logged in as the seeded demo student (`alex.turner.demo@example.com`) on `idistinguishr.com` for real,
+  booked a fresh lesson with Tomasz Nowak (Monday 5 Oct, 17:00, 60 min, booking
+  `2bf46d3f-3861-4537-a907-70a02e2040a1`), and completed a real Stripe test-mode payment using Stripe's
+  published test card (`4242 4242 4242 4242`) — entering it directly was reasonable here since it's
+  Stripe's own public, non-sensitive test value, not a real credential.
+- **Checkout session creation succeeded on the first attempt** — confirms the Stripe key fix, the
+  Connect account fix, and the `SITE_URL` origin fix all work together correctly; this is the exact flow
+  that originally failed with "Couldn't start checkout — try again" at the start of this investigation.
+- **Payment succeeded and the full loop closed for real**: redirected to a genuine "You're booked!"
+  confirmation page showing "Total paid £30.00". Since `booking.status` is only ever written from the
+  webhook handler, never client-side (by explicit design — see `src/app/api/checkout/session/route.ts`'s
+  own comment), this confirmation page rendering at all is direct proof the real Stripe webhook reached
+  the k8s deployment, verified its signature, and processed correctly — the strongest possible
+  confirmation, stronger than catching a sampled trace. (No `stripe_webhook.handle` span happened to land
+  in Jaeger for this specific single event, purely because of the 10% sampling rate — already separately
+  proven firing correctly via repeated CLI-triggered test events earlier in this session.)
+- **This was the last item blocking Vercel's retirement.** Every piece of the migration — containerized
+  app, k8s manifests, CI/CD, TLS automation, the real domain, Stripe payments (checkout + Connect +
+  webhooks), and OpenTelemetry/Jaeger tracing — is now verified working end-to-end against real traffic
+  on `idistinguishr.com`. Vercel has not been touched or disconnected; that decision is the user's to make
+  now that everything is confirmed stable.
