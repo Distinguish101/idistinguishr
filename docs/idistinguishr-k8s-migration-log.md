@@ -500,3 +500,36 @@ be a variable while debugging the migration itself.
 - **Part 5 is effectively complete**: both the OTel plumbing (auto-instrumentation, resource attributes,
   Jaeger ingestion) and one of the two manual spans are now confirmed working against real, live traffic
   — not just deployed and assumed correct.
+
+### Incident: Jaeger OOMKill crash-loop, caught and fixed
+
+- After a few days untouched, a routine check-in (`kubectl get pods`) found the Jaeger pod in
+  `CrashLoopBackOff`. `kubectl get pod -l app=jaeger -o jsonpath='{.status.containerStatuses[0].lastState}'`
+  showed `reason: OOMKilled`, `exitCode: 137`, and a restart count of 221 over roughly 3 days — it had been
+  dying and getting restarted by Kubernetes continuously, silently, the whole time.
+- **Root cause**: `@vercel/otel` (used in `src/instrumentation.ts`) samples 100% of requests by default —
+  confirmed via its README and the `OTEL_TRACES_SAMPLER`/`OTEL_TRACES_SAMPLER_ARG` handling documented in
+  its own type definitions. That 100% included every single liveness and readiness probe hit, on both
+  app pods, every 10-15 seconds, continuously. That constant unsampled trace volume grew Jaeger's Badger
+  (embedded on-disk store) footprint faster than its original 384Mi memory limit could hold, and it kept
+  getting OOMKilled and restarting before it could fully recover.
+- Checked node headroom first (`kubectl top node`: only ~24% memory in use at the time) to confirm there
+  was room to raise limits rather than needing to re-architect anything.
+- **Fix, two parts**:
+  1. `k8s/deployment.yaml` — added `OTEL_TRACES_SAMPLER=parentbased_traceidratio` and
+     `OTEL_TRACES_SAMPLER_ARG="0.1"`, sampling ~10% of root traces instead of 100%. (Any trace already
+     sampled in, e.g. one containing a real error, is still carried through in full — this only changes
+     the initial sampling decision, not mid-trace behavior.)
+  2. `k8s/jaeger.yaml` — raised Jaeger's own resource limits as a safety margin on top of the sampling
+     fix: requests 50m/128Mi → 50m/256Mi, limits 300m/384Mi → 300m/768Mi.
+- Since 3 days of repeated mid-write OOM kills left the Badger data in an unknown state, and trace data
+  is purely disposable observability output (not anything booking/payment-related), deleted the Jaeger
+  `Deployment` and its `jaeger-badger-data` PVC outright and let `kubectl apply -f k8s/jaeger.yaml`
+  recreate both clean, rather than trying to salvage the old volume.
+- **Verified fixed**: new Jaeger pod has stayed at `0` restarts since redeploy, using ~31Mi of memory
+  (vs. the 384Mi limit it used to hit) per `kubectl top pod`. Confirmed traces are still landing —
+  queried `/api/services` and `/api/traces` on the Jaeger API via port-forward and saw fresh spans
+  (including real `GET /api/health` probe traces) arriving in the newly-created store.
+- Committed both `k8s/deployment.yaml` and `k8s/jaeger.yaml` changes together. Takeaway for later: an
+  OTel rollout needs a sampling decision made deliberately up front, not left at the SDK default —
+  especially in a setup like this one where health-check probe traffic alone is a steady, nonzero load.

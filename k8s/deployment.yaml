@@ -45,6 +45,18 @@ spec:
             # instead. See https://errors.authjs.dev#untrustedhost.
             - name: AUTH_TRUST_HOST
               value: "true"
+            # @vercel/otel traces 100% of requests by default — including
+            # every liveness/readiness probe hit (2 pods x every ~10-15s),
+            # which OOMKilled Jaeger's Badger storage within days of
+            # unsampled volume. parentbased_traceidratio + 0.1 samples ~10%
+            # of root traces (any trace already in progress, e.g. one
+            # containing an error, is still carried through in full once
+            # sampled in — this only affects the initial sampling decision).
+            # See https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration.
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "0.1"
           resources:
             requests:
               cpu: 100m

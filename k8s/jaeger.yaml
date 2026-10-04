@@ -65,10 +65,18 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 256Mi
             limits:
               cpu: 300m
-              memory: 384Mi
+              # 384Mi OOMKilled this pod repeatedly within days: @vercel/otel
+              # traces 100% of requests by default, including every liveness/
+              # readiness probe hit (2 pods x every ~10-15s), which grew
+              # Badger's on-disk/in-memory footprint faster than a lean
+              # all-in-one instance could handle. Sampling is now dialed down
+              # app-side (see k8s/deployment.yaml's OTEL_TRACES_SAMPLER*), but
+              # this is raised too as a safety margin — the node has plenty
+              # of headroom (single-digit percent memory used).
+              memory: 768Mi
           readinessProbe:
             httpGet:
               path: /
