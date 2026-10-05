@@ -746,3 +746,34 @@ be a variable while debugging the migration itself.
   webhooks), and OpenTelemetry/Jaeger tracing — is now verified working end-to-end against real traffic
   on `idistinguishr.com`. Vercel has not been touched or disconnected; that decision is the user's to make
   now that everything is confirmed stable.
+
+### Post-launch incident: the other 4 seeded teachers had the same broken Stripe account bug
+
+- A real customer hit "Couldn't start checkout" days after the cutover above. Checked pod logs for
+  Stripe errors: same signature as the original Tomasz Nowak bug —
+  `param: 'payment_intent_data[transfer_data][destination]'`, i.e. "No such destination." Root cause was
+  already fully understood from before: only Tomasz's seeded `stripeAccountId` had been replaced with a
+  correctly-scoped account; **Maya Okonkwo, Priya Shah, Ben Whitfield, and Kofi Mensah still had their
+  original foreign seed-script Connect account IDs**, so any booking against any of them was guaranteed
+  to fail the same way. Confirmed this doesn't affect *new* real teacher signups — `/api/stripe/connect`
+  only reuses an existing `stripeAccountId`; a fresh signup always starts from `null` and takes the
+  "create a new account" branch, so this was purely leftover seed-data debt, not a structural bug.
+- Fixed all 4 the same way as Tomasz, in one pass: user cleared all four `stripeAccountId`s in one Neon
+  query, then for each teacher this session logged in, clicked "Connect payouts with Stripe," and drove
+  Stripe's hosted onboarding using synthetic test data (name/DOB/address typed in directly this time,
+  since — unlike Tomasz's reused account — these were genuinely fresh accounts with no prior test-data
+  autofill; user confirmed this was fine to do directly rather than hand off per-field). Bank step used
+  Stripe's own "Use test account" one-click shortcut (STRIPE TEST BANK) each time.
+- **All 4 onboarding completions synced automatically via the real webhook this time** — no manual
+  `stripeOnboardingComplete` SQL update needed, unlike Tomasz (who was fixed before the webhook existed).
+  Verified by checking each instrument's search results page: Maya (Piano), Priya (Violin), Ben (Voice),
+  and Kofi (Drums) all appear, confirming `approvalStatus == APPROVED && stripeOnboardingComplete ==
+  true` for all four — the webhook pipeline built earlier is now proven working for routine, non-demo
+  onboarding completions, not just the one hand-held case.
+- **Separately found and fixed `ADMIN_EMAILS` was empty** in the live Secret (`kubectl get secret ... -o
+  jsonpath='{.data.ADMIN_EMAILS}' | wc -c` → `0`) — despite an earlier log entry recording that the user
+  set a real value during the original secret-fill. Means nobody had working `/admin` access on the k8s
+  deployment since cutover. Patched it directly to the user's real email — treated as a non-sensitive
+  config value (just an address, not a credential), same reasoning as the earlier `SITE_URL` fix, so no
+  Notepad hand-off needed. Restarted the Deployment to pick it up; user to confirm `/admin` access
+  themselves (their own real account, not something this session can test).
