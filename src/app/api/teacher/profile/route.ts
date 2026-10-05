@@ -7,10 +7,24 @@ import { prisma } from "@/lib/prisma";
 // TeacherProfile is 1:1 with a teacher User — an upsert on userId covers
 // both "first time" and "editing" without a separate create route.
 
+// Title-cased so "piano" and "Piano" land as the same instrument instead of
+// silently fragmenting into two unrelated entries in search filtering
+// (Prisma's array `has` is an exact, case-sensitive match) and the
+// homepage's dynamically-built instrument list (lib/teacher-search.ts).
+function titleCase(s: string) {
+  return s
+    .split(" ")
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word))
+    .join(" ");
+}
+
 const profileSchema = z
   .object({
     bio: z.string().trim().min(20, "Bio should be at least 20 characters.").max(2000),
-    instruments: z.array(z.string().trim().min(1)).min(1, "Add at least one instrument.").max(10),
+    instruments: z
+      .array(z.string().trim().min(1).transform(titleCase))
+      .min(1, "Add at least one instrument.")
+      .max(10),
     hourlyRate: z.number().positive().max(500),
     formatsOffered: z.array(z.enum(["ONLINE", "IN_PERSON"])).min(1, "Offer at least one format."),
     locationText: z.string().trim().max(200).nullable(),
