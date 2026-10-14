@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { searchTeachers, getInstrumentOptions, type ResultsFilters } from "@/lib/teacher-search";
+import { PriceRange } from "./PriceRange";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -64,6 +65,11 @@ export default async function ResultsPage({
     return `/results?${params.toString()}`;
   }
 
+  const resetParams = new URLSearchParams();
+  if (instrument) resetParams.set("instrument", instrument);
+  if (location) resetParams.set("location", location);
+  const resetHref = `/results${resetParams.size ? `?${resetParams.toString()}` : ""}`;
+
   return (
     <main>
       <div className="wrap results-top">
@@ -92,6 +98,15 @@ export default async function ResultsPage({
             <input type="hidden" name="instrument" value={instrument} />
             <input type="hidden" name="location" value={location} />
 
+            <div className="filter-actions" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button type="submit" className="btn btn-secondary" style={{ flex: 1 }}>
+                Apply filters
+              </button>
+              <Link href={resetHref} className="btn btn-ghost">
+                Reset
+              </Link>
+            </div>
+
             <div className="filter-group">
               <h4>Format</h4>
               <label className="chip-check">
@@ -111,24 +126,7 @@ export default async function ResultsPage({
 
             <div className="filter-group">
               <h4>Price / hour (£)</h4>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="number"
-                  name="minPrice"
-                  min="0"
-                  placeholder="Min"
-                  defaultValue={minPrice ?? ""}
-                  style={{ width: "50%" }}
-                />
-                <input
-                  type="number"
-                  name="maxPrice"
-                  min="0"
-                  placeholder="Max"
-                  defaultValue={maxPrice ?? ""}
-                  style={{ width: "50%" }}
-                />
-              </div>
+              <PriceRange defaultMin={minPrice} defaultMax={maxPrice} />
             </div>
 
             <div className="filter-group">
@@ -170,9 +168,6 @@ export default async function ResultsPage({
               </select>
             </div>
 
-            <button type="submit" className="btn btn-secondary" style={{ width: "100%" }}>
-              Apply filters
-            </button>
           </form>
         </aside>
 
