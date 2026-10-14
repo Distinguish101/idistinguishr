@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
 import { Spinner } from "@/components/Spinner";
+import { passwordIssue } from "@/lib/password";
 
 type Mode = "signup" | "login";
 
@@ -71,6 +72,15 @@ export function AuthForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (mode === "signup") {
+      const weakness = passwordIssue(password, email);
+      if (weakness) {
+        setError(weakness);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -160,6 +170,9 @@ export function AuthForm({
             required
             minLength={8}
           />
+          {mode === "signup" && (
+            <p className="field-hint">At least 8 characters, with a letter and a number.</p>
+          )}
         </div>
 
         {error && <p className="field-error">{error}</p>}

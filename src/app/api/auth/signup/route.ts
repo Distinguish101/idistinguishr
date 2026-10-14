@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { passwordIssue } from "@/lib/password";
 
 const signupSchema = z.object({
   fullName: z.string().trim().min(2).max(100),
@@ -17,6 +18,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { fullName, email, password, role } = parsed.data;
+
+  const weakness = passwordIssue(password, email);
+  if (weakness) {
+    return NextResponse.json({ error: weakness }, { status: 400 });
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
