@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
 
@@ -48,6 +48,27 @@ export function SlotPicker({
   const todayKey = dateKey(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const [viewYear, setViewYear] = useState(now.getUTCFullYear());
   const [viewMonth, setViewMonth] = useState(now.getUTCMonth());
+
+  // Sizes the calendar card so its bottom edge sits a constant 24px above the
+  // bottom of the screen at any window size. Where the card starts varies
+  // with the pills above it, so measure it instead of hard-coding an offset.
+  // min-height, so content is never clipped; single-column mobile is skipped.
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function fit() {
+      const el = cardRef.current;
+      if (!el) return;
+      if (window.innerWidth <= 680) {
+        el.style.minHeight = "";
+        return;
+      }
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.minHeight = `${Math.max(0, window.innerHeight - top - 24)}px`;
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [loadingSlots, slots.length]);
 
   useEffect(() => {
     setLoadingSlots(true);
@@ -171,7 +192,7 @@ export function SlotPicker({
       ) : (
         <div className="cal-layout">
           <div>
-            <div className="cal-card">
+            <div className="cal-card" ref={cardRef}>
               <div className="cal-head">
                 <h2>{monthLabel}</h2>
                 <div className="cal-nav">
