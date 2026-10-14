@@ -114,14 +114,20 @@ export function AuthForm({
         <button
           type="button"
           className={mode === "signup" ? "active" : ""}
-          onClick={() => setMode("signup")}
+          onClick={() => {
+            setMode("signup");
+            setError(null);
+          }}
         >
           Sign up
         </button>
         <button
           type="button"
           className={mode === "login" ? "active" : ""}
-          onClick={() => setMode("login")}
+          onClick={() => {
+            setMode("login");
+            setError(null);
+          }}
         >
           Log in
         </button>
