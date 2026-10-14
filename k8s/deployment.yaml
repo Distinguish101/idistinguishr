@@ -45,6 +45,12 @@ spec:
             # instead. See https://errors.authjs.dev#untrustedhost.
             - name: AUTH_TRUST_HOST
               value: "true"
+            # Behind Traefik the pod only ever sees its own internal address
+            # (0.0.0.0:3000), and Auth.js was building server-side redirects
+            # from it: signing out landed users on https://0.0.0.0:3000/.
+            # AUTH_URL pins the public origin Auth.js builds absolute URLs from.
+            - name: AUTH_URL
+              value: https://idistinguishr.com
             # @vercel/otel traces 100% of requests by default — including
             # every liveness/readiness probe hit (2 pods x every ~10-15s),
             # which OOMKilled Jaeger's Badger storage within days of
