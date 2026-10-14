@@ -66,6 +66,11 @@ export default async function ResultsPage({
     return `/results?${params.toString()}`;
   }
 
+  // Remounts the filter form whenever the URL's filters change. Its inputs are
+  // uncontrolled (and PriceRange keeps its own state), so without this a soft
+  // navigation such as Reset would leave the old values showing.
+  const filterKey = [minPrice, maxPrice, minRating, formats.join(","), availableThisWeek, sort, instrument, location].join("|");
+
   const resetParams = new URLSearchParams();
   if (instrument) resetParams.set("instrument", instrument);
   if (location) resetParams.set("location", location);
@@ -95,15 +100,15 @@ export default async function ResultsPage({
 
       <div className="wrap results-body">
         <aside className="filters">
-          <form action="/results" method="get">
+          <form key={filterKey} action="/results" method="get">
             <input type="hidden" name="instrument" value={instrument} />
             <input type="hidden" name="location" value={location} />
 
             <div className="filter-actions" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <button type="submit" className="btn btn-secondary" style={{ flex: 1 }}>
+              <button type="submit" className="btn btn-secondary" style={{ flex: 1, whiteSpace: "nowrap", paddingInline: 10 }}>
                 Apply filters
               </button>
-              <Link href={resetHref} className="btn btn-ghost">
+              <Link href={resetHref} className="btn btn-ghost" style={{ whiteSpace: "nowrap", paddingInline: 12 }}>
                 Reset
               </Link>
             </div>
