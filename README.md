@@ -9,7 +9,7 @@ This started as a planning exercise (`docs/idistinguishr-*.md` — market resear
 ## What's actually running
 
 - **Real marketplace payments** — Stripe Connect (Express accounts, destination charges with an application fee), not a toy checkout. Teachers onboard through Stripe's hosted flow; booking status only ever changes from a signature-verified webhook, never client-side.
-- **Self-hosted Kubernetes** — k3s on a provisioned Oracle Cloud VM, not a PaaS. Traefik ingress, cert-manager issuing real Let's Encrypt certificates, a GitHub Actions pipeline that builds multi-arch Docker images, runs database migrations as a Kubernetes Job, and rolls out the Deployment on every push to `main`.
+- **Self-hosted Kubernetes** — k3s on a provisioned Oracle Cloud VM, not a PaaS. Traefik ingress, cert-manager issuing real Let's Encrypt certificates, a GitHub Actions pipeline that builds Docker images natively on ARM runners, runs database migrations as a Kubernetes Job, and rolls out the Deployment on every push to `main`.
 - **Distributed tracing** — OpenTelemetry auto-instrumentation plus manual spans on the two flows that actually matter (the booking soft-hold transaction and the Stripe webhook handler), exported to a self-hosted Jaeger instance running in the same cluster.
 - **AI-assisted content moderation** — new teacher profiles get a first-pass automated review (Claude Haiku, structured output) right after Stripe onboarding completes, triaging obvious approvals from everything else so a human only has to look at the ones that need judgment. Fails closed: any error in the AI call defers to manual review rather than silently approving.
 - **A real double-booking problem, solved properly** — booking a slot opens a short-lived "soft hold" inside a database transaction, with expired holds released automatically; see `prisma/schema.prisma` and the data model doc for the reasoning.
@@ -34,7 +34,7 @@ See `docs/idistinguishr-stack-decision.md` for the original reasoning, and `docs
 
 ```
 push to main
-  → GitHub Actions builds linux/amd64+arm64 images (multi-stage Dockerfile:
+  → GitHub Actions builds linux/arm64 images on a native ARM runner (multi-stage Dockerfile:
     a lean runtime image with no Prisma CLI, and a separate :migrate image
     that keeps it for running migrations)
   → pushes to GHCR
@@ -62,7 +62,7 @@ Everything runs on a single, free-tier cloud VM that I provisioned and administe
 
 Decisions worth knowing about:
 
-- **ARM, so every image is multi-arch.** CI builds `linux/amd64` and `linux/arm64` (via QEMU) so the same images run on this cluster or on a conventional x86 managed cluster later.
+- **ARM, so CI builds natively on ARM.** Images are `linux/arm64` only, built on GitHub's native ARM runners. An earlier version emulated ARM under QEMU, which took 10 to 20 minutes per build and sometimes stalled. Moving to an x86 cluster later means adding an amd64 build back (see the comment in `deploy.yml`).
 - **Deliberately a single node.** It keeps cost at zero, and the trade-off is no infrastructure redundancy: the two app replicas protect against pod failure and bad rollouts, not against losing the VM. Moving to a managed multi-node cluster is a manifest-compatible change.
 - **Sized with headroom measured, not guessed.** The node normally sits at roughly a quarter of its memory; Jaeger's limits were raised after an out-of-memory incident, documented in the migration log.
 
