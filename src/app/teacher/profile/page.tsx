@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeacherProfileForm } from "./TeacherProfileForm";
+import { StripeConnectLink } from "./StripeConnectLink";
 
 export default async function TeacherProfilePage() {
   const session = await auth();
@@ -46,9 +47,9 @@ export default async function TeacherProfilePage() {
                   ? "You've started Stripe onboarding but haven't finished it yet."
                   : "Connect a Stripe account to get paid for lessons — both this and profile approval are required before you're bookable."}
               </p>
-              <a href="/api/stripe/connect" className="btn btn-primary">
-                {profile.stripeAccountId ? "Finish Stripe onboarding" : "Connect payouts with Stripe"}
-              </a>
+              <StripeConnectLink
+                label={profile.stripeAccountId ? "Finish Stripe onboarding" : "Connect payouts with Stripe"}
+              />
             </>
           )}
         </div>
