@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { ApprovalButtons } from "./ApprovalButtons";
+import { displayInstruments } from "@/lib/instruments";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 type StatusFilter = "PENDING" | "APPROVED" | "REJECTED";
@@ -73,7 +74,7 @@ export default async function AdminPage({
             <p style={{ marginTop: 12 }}>{t.bio}</p>
 
             <div className="t-soft" style={{ fontSize: 13, marginTop: 8 }}>
-              <strong>Instruments:</strong> {t.instruments.join(", ")}
+              <strong>Instruments:</strong> {displayInstruments(t.instruments)}
             </div>
             <div className="t-soft" style={{ fontSize: 13 }}>
               <strong>Rate:</strong> £{(t.hourlyRateMinorUnits / 100).toFixed(2)}/hr ·{" "}

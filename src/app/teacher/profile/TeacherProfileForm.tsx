@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
+import { displayInstruments } from "@/lib/instruments";
 
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -26,7 +27,7 @@ const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
 export function TeacherProfileForm({ initial }: { initial: Profile }) {
   const router = useRouter();
   const [bio, setBio] = useState(initial?.bio ?? "");
-  const [instruments, setInstruments] = useState(initial?.instruments.join(", ") ?? "");
+  const [instruments, setInstruments] = useState(initial ? displayInstruments(initial.instruments) : "");
   const [hourlyRate, setHourlyRate] = useState(
     initial ? (initial.hourlyRateMinorUnits / 100).toString() : ""
   );

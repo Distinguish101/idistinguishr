@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getUpcomingAvailability } from "@/lib/availability";
 import { ProfileTabs } from "./ProfileTabs";
+import { displayInstruments } from "@/lib/instruments";
 
 export default async function TeacherProfilePage({
   params,
@@ -76,7 +77,7 @@ export default async function TeacherProfilePage({
             ♪♪♪♪♪ {Number(teacher.avgRating).toFixed(1)} ({teacher.reviewCount} reviews)
           </span>
           <span>·</span>
-          <span>{teacher.instruments.join(", ")}</span>
+          <span>{displayInstruments(teacher.instruments)}</span>
           <span>·</span>
           <span>{locationLabel}</span>
         </div>

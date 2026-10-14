@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { searchTeachers, getInstrumentOptions, type ResultsFilters } from "@/lib/teacher-search";
 import { PriceRange } from "./PriceRange";
+import { normalizeInstrument, displayInstrument } from "@/lib/instruments";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -29,7 +30,7 @@ export default async function ResultsPage({
 }) {
   const sp = await searchParams;
 
-  const instrument = first(sp.instrument) ?? "";
+  const instrument = normalizeInstrument(first(sp.instrument) ?? "");
   const location = first(sp.location) ?? "";
   const minPriceRaw = first(sp.minPrice);
   const maxPriceRaw = first(sp.maxPrice);
@@ -81,7 +82,7 @@ export default async function ResultsPage({
             <option value="">Any instrument</option>
             {instruments.map((i) => (
               <option key={i} value={i}>
-                {i}
+                {displayInstrument(i)}
               </option>
             ))}
           </select>

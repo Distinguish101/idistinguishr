@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { displayInstruments } from "@/lib/instruments";
 
 type CarouselTeacher = {
   id: string;
@@ -60,7 +61,7 @@ export function TeacherCarousel({ teachers }: { teachers: CarouselTeacher[] }) {
             </div>
             <div className="body">
               <div className="name">{t.fullName}</div>
-              <div className="inst">{t.instruments.join(", ")}</div>
+              <div className="inst">{displayInstruments(t.instruments)}</div>
               <div className="meta">
                 <span className="note-rating">♪♪♪♪♪ {t.avgRating.toFixed(1)}</span>
                 <span className="rate">£{(t.hourlyRateMinorUnits / 100).toFixed(0)}/hr</span>

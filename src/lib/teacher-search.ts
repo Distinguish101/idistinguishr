@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUpcomingAvailability } from "@/lib/availability";
+import { normalizeInstrument, displayInstrument } from "@/lib/instruments";
 
 // Bookable requires both approval and completed Stripe onboarding — see
 // data-model.md. Stripe onboarding isn't built yet (that's a later step),
@@ -30,7 +31,11 @@ const PAGE_SIZE = 12;
 function buildWhere(filters: ResultsFilters): Prisma.TeacherProfileWhereInput {
   const where: Prisma.TeacherProfileWhereInput = { ...BOOKABLE_WHERE };
 
-  if (filters.instrument) where.instruments = { has: filters.instrument };
+  if (filters.instrument) {
+    // Rows saved before instruments were normalized may still be capitalized.
+    const canonical = normalizeInstrument(filters.instrument);
+    where.instruments = { hasSome: [canonical, displayInstrument(canonical)] };
+  }
 
   const formats = new Set(filters.formats ?? []);
   let locationText: string | null = null;
@@ -132,7 +137,7 @@ export async function getInstrumentOptions(): Promise<string[]> {
     select: { instruments: true },
   });
   const set = new Set<string>();
-  profiles.forEach((p) => p.instruments.forEach((i) => set.add(i)));
+  profiles.forEach((p) => p.instruments.forEach((i) => set.add(normalizeInstrument(i))));
   return Array.from(set).sort();
 }
 

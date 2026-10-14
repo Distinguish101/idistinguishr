@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getInstrumentOptions, getFeaturedTeachers } from "@/lib/teacher-search";
 import { TeacherCarousel } from "@/components/TeacherCarousel";
+import { displayInstrument } from "@/lib/instruments";
 
 export default async function HomePage() {
   const [instruments, featured] = await Promise.all([getInstrumentOptions(), getFeaturedTeachers(8)]);
@@ -31,7 +32,7 @@ export default async function HomePage() {
                   </option>
                   {instruments.map((i) => (
                     <option key={i} value={i}>
-                      {i}
+                      {displayInstrument(i)}
                     </option>
                   ))}
                 </select>
@@ -55,7 +56,7 @@ export default async function HomePage() {
                     <span className="glyph" aria-hidden="true">
                       ♪
                     </span>
-                    {i}
+                    {displayInstrument(i)}
                   </Link>
                 ))}
               </div>
