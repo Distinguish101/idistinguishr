@@ -45,6 +45,27 @@ push to main
 
 The cluster itself: two app replicas behind a Traefik Ingress, TLS from cert-manager/Let's Encrypt, a self-hosted Jaeger (Badger storage, no Elasticsearch needed at this scale) receiving traces over OTLP. See `docs/k8s-deploy.md` for the full apply order and `docs/tracing.md` for what's instrumented and why.
 
+## Hardware and infrastructure
+
+Everything runs on a single, free-tier cloud VM that I provisioned and administer myself:
+
+| | |
+|---|---|
+| Provider / region | Oracle Cloud "Always Free", UK South (London) |
+| Instance | `VM.Standard.A1.Flex` (Ampere ARM, `aarch64`), 2 OCPU / 12 GB RAM |
+| OS | Oracle Linux 9 (SELinux enforcing, with the `k3s-selinux` policy installed) |
+| Kubernetes | k3s, single node (control plane and workloads share the VM) |
+| Network | VCN with a public subnet; security group opens only 22 (SSH), 80/443 (web) and 6443 (Kubernetes API, for CI) |
+| Storage | k3s `local-path-provisioner` volume (2 GiB) for Jaeger's trace data |
+| Database | Not on this box: managed Postgres on Neon (`eu-west-2`) |
+| Domain / DNS | `idistinguishr.com`, registered and served via Cloudflare (DNS-only, no proxy) |
+
+Decisions worth knowing about:
+
+- **ARM, so every image is multi-arch.** CI builds `linux/amd64` and `linux/arm64` (via QEMU) so the same images run on this cluster or on a conventional x86 managed cluster later.
+- **Deliberately a single node.** It keeps cost at zero, and the trade-off is no infrastructure redundancy: the two app replicas protect against pod failure and bad rollouts, not against losing the VM. Moving to a managed multi-node cluster is a manifest-compatible change.
+- **Sized with headroom measured, not guessed.** The node normally sits at roughly a quarter of its memory; Jaeger's limits were raised after an out-of-memory incident, documented in the migration log.
+
 ## Project docs
 
 | Doc | Covers |
