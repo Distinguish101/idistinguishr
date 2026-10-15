@@ -7,7 +7,6 @@ export const metadata: Metadata = { title: "Privacy — IDistinguishR" };
 export default function PrivacyPage() {
   return (
     <main className="wrap" style={{ paddingTop: 48, paddingBottom: 80, maxWidth: 720 }}>
-      <span className="eyebrow">Legal</span>
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
         Privacy Policy
       </h1>

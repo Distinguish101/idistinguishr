@@ -21,7 +21,6 @@ export default async function AccountPage() {
 
   return (
     <main className="wrap" style={{ paddingTop: 40, paddingBottom: 64, maxWidth: 640 }}>
-      <span className="eyebrow">Account</span>
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
         {user.fullName}
       </h1>

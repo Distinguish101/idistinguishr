@@ -7,7 +7,6 @@ export default function ForgotPasswordPage() {
   return (
     <main className="auth-page">
       <div className="auth-card">
-        <span className="eyebrow">Reset your password</span>
         <h1 className="t-display-l" style={{ marginBottom: 20 }}>
           Forgot password?
         </h1>

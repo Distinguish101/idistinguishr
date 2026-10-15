@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import { signOut } from "next-auth/react";
 import { Spinner } from "@/components/Spinner";
 
 type Props = { hasPassword: boolean; isInstructor: boolean; upcomingLessons: number };
 
 export function AccountActions({ hasPassword, isInstructor, upcomingLessons }: Props) {
+  const uid = useId();
   const [busy, setBusy] = useState<"deactivate" | "delete" | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [secret, setSecret] = useState("");
@@ -98,8 +99,8 @@ export function AccountActions({ hasPassword, isInstructor, upcomingLessons }: P
         ) : (
           <form onSubmit={handleDelete}>
             <div className="field">
-              <label>{hasPassword ? "Enter your password to confirm" : "Type DELETE to confirm"}</label>
-              <input
+              <label htmlFor={`${uid}-1`}>{hasPassword ? "Enter your password to confirm" : "Type DELETE to confirm"}</label>
+              <input id={`${uid}-1`}
                 type={hasPassword ? "password" : "text"}
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}

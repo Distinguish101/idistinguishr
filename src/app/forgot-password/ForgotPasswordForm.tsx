@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import { Spinner } from "@/components/Spinner";
 
 export function ForgotPasswordForm() {
+  const uid = useId();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,8 +47,8 @@ export function ForgotPasswordForm() {
     <form onSubmit={handleSubmit}>
       <p style={{ marginTop: 0 }}>Enter your email and we&rsquo;ll send you a link to choose a new password.</p>
       <div className="field">
-        <label>Email</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <label htmlFor={`${uid}-1`}>Email</label>
+        <input id={`${uid}-1`} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       {error && <p className="field-error">{error}</p>}
       <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={loading}>

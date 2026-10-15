@@ -1524,3 +1524,47 @@ All 31 colour pairs pass WCAG 2.2 AA (computed). Verification: desktop captured 
 deferred to the build. Process note: the in-app browser pane's screenshots lag its scroll position, so
 headless Edge screenshots were used instead. Impeccable's `concept-seed` engine does not run on this PC,
 so its direction roll was not used; the directions were derived by hand.
+
+## 33. UI overhaul, step 2: a three-theme design system, built into the app (2026-10-15)
+
+The user liked the round-2 directions and asked for them as togglable themes. Feedback along the way: the
+third ("Friendly Colour Blocks") felt childlike, so it was replaced by a calmer theme in the same blue and
+amber family as the other two.
+
+**Themes** (`data-theme` on `<html>`): **Cobalt** (default; saturated blue hero with the search straddling
+its edge, Hanken Grotesk), **Slate** (calm: left-aligned hero, hairline cards, pill links for instruments,
+navy action colour with an amber highlight, Bricolage Grotesque + Figtree) and **Midnight** (dark, tiled
+"bento" layout, lime accent, Schibsted Grotesk). The choice is stored in a `theme` cookie that the server
+reads (`src/lib/theme.ts`), so the first paint already matches (no flash). A labelled Theme dropdown in
+the header switches instantly (`ThemeSwitcher`). `?theme=slate` on any URL applies and remembers a theme,
+so themed links can be shared (`src/middleware.ts`; it does not redirect, because a redirect would need an
+absolute URL and behind the proxy the pod's own origin is `0.0.0.0:3000`, the sign-out bug again; an
+earlier relative-redirect attempt also threw "Invalid URL").
+
+**How it is built.** `globals.css` was rewritten around design tokens (colour roles, fonts, radii,
+shadows); a theme is a token set plus a small "Theme structure" section for the home-page layout. Every
+existing class name was kept, so un-redesigned pages inherit all three themes. Fonts are self-hosted by
+`next/font` (fixing the earlier finding that no web font ever loaded); only the default theme's font is
+preloaded, the others are fetched when that theme is used. Token colour pairs are all WCAG 2.2 AA
+(field borders held to 3:1). The home page is split into a data page and a pure `HomeView`, and an
+unlinked, noindex `/themes` page renders it plus a component sampler with sample data (no database), so
+any theme can be checked or scanned in isolation.
+
+**Accessibility fixes made on the way** (from the §32 audit): every form field now has a programmatically
+linked label (23 fields in 7 forms, plus a proper group for "Formats offered"); skip link; global
+`:focus-visible` rings (a different ring colour on the cobalt band); reduced-motion support; 44-48px
+controls and 16px body text (was 14px with tiny monospace caps); the carousel no longer auto-advances for
+reduced-motion users and pauses on pointer or keyboard focus (WCAG 2.2.2); star icon plus an accessible
+"Rated 4.9 out of 5" instead of five note glyphs; wordmark is text plus an SVG so it works on every header
+colour; loading states are a `<main>` landmark; heading order fixed (home steps, results page now has an
+`<h1>`); removed the visible "US-25"-style developer labels; "practise" (UK verb). Drawn SVG instrument
+icons replace the note glyph.
+
+**Verification.** axe-core 4.10.2 against the real `/themes` page in each theme: 0 violations, 46 passes,
+one `<main>`, correct fonts loading per theme. The theme switcher was exercised in the browser (attribute,
+cookie and header colour change). Screenshots at 1280px and 500px for each theme (the narrowest the
+headless tool allows) found and fixed: tabular-figure spacing distortion in Schibsted, a clipped select,
+overlapping midnight hero tiles, a cobalt hero that ignored the mobile layout, and a midnight tile label
+overflow. `tsc` and a full `next build` pass. **Not yet checked:** logged-in pages (dashboard, booking
+calendar, profile and availability forms) and real database data; they share the same restyled classes
+but need a look in each theme. Footer "Contact" still points at a placeholder address.

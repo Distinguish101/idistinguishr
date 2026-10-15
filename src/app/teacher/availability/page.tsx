@@ -30,7 +30,6 @@ export default async function AvailabilityPage() {
 
   return (
     <main className="wrap" style={{ paddingTop: 40, paddingBottom: 64, maxWidth: 640 }}>
-      <span className="eyebrow">US-26</span>
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
         Your availability
       </h1>

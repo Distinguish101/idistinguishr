@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
 import { displayInstruments } from "@/lib/instruments";
@@ -25,6 +25,7 @@ const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
 };
 
 export function TeacherProfileForm({ initial }: { initial: Profile }) {
+  const uid = useId();
   const router = useRouter();
   const [bio, setBio] = useState(initial?.bio ?? "");
   const [instruments, setInstruments] = useState(initial ? displayInstruments(initial.instruments) : "");
@@ -96,8 +97,8 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       )}
 
       <div className="field">
-        <label>Bio</label>
-        <textarea
+        <label htmlFor={`${uid}-1`}>Bio</label>
+        <textarea id={`${uid}-1`}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           required
@@ -108,8 +109,8 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       </div>
 
       <div className="field">
-        <label>Instruments (comma-separated)</label>
-        <input
+        <label htmlFor={`${uid}-2`}>Instruments (comma-separated)</label>
+        <input id={`${uid}-2`}
           value={instruments}
           onChange={(e) => setInstruments(e.target.value)}
           required
@@ -118,8 +119,8 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       </div>
 
       <div className="field">
-        <label>Hourly rate (£)</label>
-        <input
+        <label htmlFor={`${uid}-3`}>Hourly rate (£)</label>
+        <input id={`${uid}-3`}
           type="number"
           min="1"
           step="0.5"
@@ -129,23 +130,24 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
         />
       </div>
 
-      <div className="field">
-        <label>Formats offered</label>
+      <div className="field" role="group" aria-labelledby={`${uid}-formats`}>
+        <span className="field-label" id={`${uid}-formats`}>
+          Formats offered
+        </span>
         <div style={{ display: "flex", gap: 16 }}>
-          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 14 }}>
+          <label className="check-label">
             <input type="checkbox" checked={online} onChange={(e) => setOnline(e.target.checked)} /> Online
           </label>
-          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 14 }}>
-            <input type="checkbox" checked={inPerson} onChange={(e) => setInPerson(e.target.checked)} /> In
-            person
+          <label className="check-label">
+            <input type="checkbox" checked={inPerson} onChange={(e) => setInPerson(e.target.checked)} /> In person
           </label>
         </div>
       </div>
 
       {inPerson && (
         <div className="field">
-          <label>Location</label>
-          <input
+          <label htmlFor={`${uid}-4`}>Location</label>
+          <input id={`${uid}-4`}
             value={locationText}
             onChange={(e) => setLocationText(e.target.value)}
             placeholder="e.g. Clapham, London"
@@ -154,8 +156,8 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       )}
 
       <div className="field">
-        <label>Photo URL</label>
-        <input
+        <label htmlFor={`${uid}-5`}>Photo URL</label>
+        <input id={`${uid}-5`}
           type="url"
           value={photoUrl}
           onChange={(e) => setPhotoUrl(e.target.value)}
@@ -164,8 +166,8 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       </div>
 
       <div className="field">
-        <label>Credentials</label>
-        <textarea
+        <label htmlFor={`${uid}-6`}>Credentials</label>
+        <textarea id={`${uid}-6`}
           value={credentials}
           onChange={(e) => setCredentials(e.target.value)}
           required

@@ -56,7 +56,6 @@ export default async function DashboardPage({
 
   return (
     <main className="wrap dash-shell">
-      <span className="eyebrow">US-21</span>
       <h1 className="t-display-l">Your lessons</h1>
 
       <div className="dash-tabs">

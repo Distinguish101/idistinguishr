@@ -56,7 +56,6 @@ export default async function TeacherDashboardPage({
 
   return (
     <main className="wrap dash-shell">
-      <span className="eyebrow">US-27 / US-28</span>
       <h1 className="t-display-l">Your teaching dashboard</h1>
 
       <div className="card" style={{ marginTop: 24, marginBottom: 32 }}>

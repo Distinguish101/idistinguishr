@@ -1,18 +1,32 @@
-import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
+import type { ThemeId } from "@/lib/theme";
 import { SignOutButton } from "./SignOutButton";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
-export async function NavBar() {
+// A text wordmark with a drawn note (not the old PNG): it takes its colour
+// from the theme, so it stays legible on every header colour.
+function Wordmark() {
+  return (
+    <Link href="/" className="logo" aria-label="IDistinguishR, home">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 18V5l11-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="17" cy="16" r="3" />
+      </svg>
+      <span>IDistinguishR</span>
+    </Link>
+  );
+}
+
+export async function NavBar({ theme }: { theme: ThemeId }) {
   const session = await auth();
 
   return (
-    <nav className="topbar">
+    <nav className="topbar" aria-label="Main">
       <div className="wrap topbar-inner">
-        <Link href="/" className="logo">
-          <Image src="/logo.png" alt="IDistinguishR" width={110} height={32} priority />
-        </Link>
+        <Wordmark />
         <div className="topbar-links">
           {session?.user ? (
             <>
@@ -30,8 +44,11 @@ export async function NavBar() {
               <SignOutButton />
             </>
           ) : (
-            <Link href="/auth">Log in</Link>
+            <Link href="/auth" className="nav-cta">
+              Log in
+            </Link>
           )}
+          <ThemeSwitcher current={theme} />
         </div>
       </div>
     </nav>

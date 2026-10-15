@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { searchTeachers, getInstrumentOptions, type ResultsFilters } from "@/lib/teacher-search";
 import { PriceRange } from "./PriceRange";
+import { StarIcon } from "@/components/InstrumentIcon";
 import { normalizeInstrument, displayInstrument } from "@/lib/instruments";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
@@ -79,11 +80,14 @@ export default async function ResultsPage({
   return (
     <main>
       <div className="wrap results-top">
-        <span className="eyebrow">
-          {total} teacher{total === 1 ? "" : "s"} found
-        </span>
-        <form action="/results" method="get" className="results-search">
-          <select name="instrument" defaultValue={instrument}>
+        <h1 className="t-display-l">
+          {total} instructor{total === 1 ? "" : "s"} found
+        </h1>
+        <form action="/results" method="get" className="results-search" role="search" aria-label="Search instructors">
+          <label htmlFor="results-instrument" className="sr-only">
+            Instrument
+          </label>
+          <select id="results-instrument" name="instrument" defaultValue={instrument}>
             <option value="">Any instrument</option>
             {instruments.map((i) => (
               <option key={i} value={i}>
@@ -91,7 +95,10 @@ export default async function ResultsPage({
               </option>
             ))}
           </select>
-          <input name="location" defaultValue={location} placeholder="Edinburgh, or Online" />
+          <label htmlFor="results-location" className="sr-only">
+            Location or online
+          </label>
+          <input id="results-location" name="location" defaultValue={location} placeholder="Edinburgh, or Online" />
           <button type="submit" className="btn btn-primary">
             Search
           </button>
@@ -164,8 +171,8 @@ export default async function ResultsPage({
             </div>
 
             <div className="filter-group">
-              <h4>Sort</h4>
-              <select name="sort" defaultValue={sort}>
+              <h4 id="sort-label">Sort</h4>
+              <select name="sort" defaultValue={sort} aria-labelledby="sort-label">
                 <option value="relevance">Relevance</option>
                 <option value="price_asc">Price: low to high</option>
                 <option value="price_desc">Price: high to low</option>
@@ -191,13 +198,17 @@ export default async function ResultsPage({
               </div>
               <div className="rlist">
                 {teachers.map((t) => (
-                  <Link key={t.id} href={`/teachers/${t.id}`} className="rcard">
+                  <Link
+                    key={t.id}
+                    href={`/teachers/${t.id}`}
+                    className="rcard"
+                  >
                     <div className="photo">
                       {t.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- teacher-submitted URL, any host
-                        <img src={t.photoUrl} alt={t.user.fullName} />
+                        <img src={t.photoUrl} alt="" />
                       ) : (
-                        initials(t.user.fullName)
+                        <span aria-hidden="true">{initials(t.user.fullName)}</span>
                       )}
                     </div>
                     <div>
@@ -212,8 +223,12 @@ export default async function ResultsPage({
                       </div>
                     </div>
                     <div className="side">
-                      <div className="note-rating">
-                        ♪♪♪♪♪ {Number(t.avgRating).toFixed(1)} ({t.reviewCount})
+                      <div
+                        className="note-rating"
+                        aria-label={`Rated ${Number(t.avgRating).toFixed(1)} out of 5, ${t.reviewCount} reviews`}
+                      >
+                        <StarIcon size={16} />
+                        {Number(t.avgRating).toFixed(1)} ({t.reviewCount})
                       </div>
                       <div className="price">£{(t.hourlyRateMinorUnits / 100).toFixed(0)}/hr</div>
                     </div>

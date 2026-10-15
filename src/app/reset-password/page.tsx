@@ -14,7 +14,6 @@ export default async function ResetPasswordPage({
   return (
     <main className="auth-page">
       <div className="auth-card">
-        <span className="eyebrow">Reset your password</span>
         <h1 className="t-display-l" style={{ marginBottom: 20 }}>
           Choose a new password
         </h1>

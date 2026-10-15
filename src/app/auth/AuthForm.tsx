@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
@@ -25,6 +25,7 @@ export function AuthForm({
   googleEnabled: boolean;
   bookingContext: BookingContext | null;
 }) {
+  const uid = useId();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signup");
   const [fullName, setFullName] = useState("");
@@ -138,8 +139,8 @@ export function AuthForm({
         {mode === "signup" && (
           <>
             <div className="field">
-              <label>Full name</label>
-              <input
+              <label htmlFor={`${uid}-1`}>Full name</label>
+              <input id={`${uid}-1`}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -148,8 +149,8 @@ export function AuthForm({
             </div>
             {!bookingContext && (
               <div className="field">
-                <label>I am a...</label>
-                <select value={role} onChange={(e) => setRole(e.target.value as "STUDENT" | "TEACHER")}>
+                <label htmlFor={`${uid}-2`}>I am a...</label>
+                <select id={`${uid}-2`} value={role} onChange={(e) => setRole(e.target.value as "STUDENT" | "TEACHER")}>
                   <option value="STUDENT">Student, looking for lessons</option>
                   <option value="TEACHER">Instructor, offering lessons</option>
                 </select>
@@ -159,8 +160,8 @@ export function AuthForm({
         )}
 
         <div className="field">
-          <label>Email</label>
-          <input
+          <label htmlFor={`${uid}-3`}>Email</label>
+          <input id={`${uid}-3`}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -169,8 +170,8 @@ export function AuthForm({
         </div>
 
         <div className="field">
-          <label>Password</label>
-          <input
+          <label htmlFor={`${uid}-4`}>Password</label>
+          <input id={`${uid}-4`}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

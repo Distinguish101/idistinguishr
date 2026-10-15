@@ -39,7 +39,6 @@ export default async function AdminPage({
 
   return (
     <main className="wrap dash-shell">
-      <span className="eyebrow">US-30</span>
       <h1 className="t-display-l">Instructor approvals</h1>
 
       <div className="dash-tabs">

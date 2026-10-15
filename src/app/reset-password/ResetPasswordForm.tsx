@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import Link from "next/link";
 import { Spinner } from "@/components/Spinner";
 import { passwordIssue } from "@/lib/password";
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const uid = useId();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +58,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="field">
-        <label>New password</label>
-        <input
+        <label htmlFor={`${uid}-1`}>New password</label>
+        <input id={`${uid}-1`}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -69,8 +70,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <p className="field-hint">At least 8 characters, with a letter and a number.</p>
       </div>
       <div className="field">
-        <label>Confirm new password</label>
-        <input
+        <label htmlFor={`${uid}-2`}>Confirm new password</label>
+        <input id={`${uid}-2`}
           type="password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

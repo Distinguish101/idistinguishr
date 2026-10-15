@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
 
 export function ReviewForm({ bookingId }: { bookingId: string }) {
+  const uid = useId();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(5);
@@ -42,8 +43,8 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
   return (
     <form onSubmit={handleSubmit} style={{ marginTop: 10, minWidth: 220 }}>
       <div className="field" style={{ marginBottom: 8 }}>
-        <label>Rating</label>
-        <select value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+        <label htmlFor={`${uid}-1`}>Rating</label>
+        <select id={`${uid}-1`} value={rating} onChange={(e) => setRating(Number(e.target.value))}>
           {[5, 4, 3, 2, 1].map((n) => (
             <option key={n} value={n}>
               {n} {n === 1 ? "star" : "stars"}
@@ -52,8 +53,8 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
         </select>
       </div>
       <div className="field" style={{ marginBottom: 8 }}>
-        <label>Comment (optional)</label>
-        <textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={2000} />
+        <label htmlFor={`${uid}-2`}>Comment (optional)</label>
+        <textarea id={`${uid}-2`} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={2000} />
       </div>
       {error && <p className="field-error">{error}</p>}
       <div style={{ display: "flex", gap: 8 }}>

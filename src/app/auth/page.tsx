@@ -73,7 +73,6 @@ export default async function AuthPage({
             at {bookingContext.startTime}
           </div>
         )}
-        <span className="eyebrow">Sign up or log in</span>
         <h1 className="t-display-l" style={{ marginBottom: 20 }}>
           IDistinguishR
         </h1>

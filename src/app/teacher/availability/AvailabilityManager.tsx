@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useId } from "react";
 import { Spinner } from "@/components/Spinner";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -21,6 +21,7 @@ export function AvailabilityManager({
   initialRules: Rule[];
   initialExceptions: Exception[];
 }) {
+  const uid = useId();
   const [rules, setRules] = useState(initialRules);
   const [exceptions, setExceptions] = useState(initialExceptions);
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +129,8 @@ export function AvailabilityManager({
           style={{ display: "flex", gap: 12, alignItems: "flex-end", marginTop: 20, flexWrap: "wrap" }}
         >
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Day</label>
-            <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}>
+            <label htmlFor={`${uid}-1`}>Day</label>
+            <select id={`${uid}-1`} value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))}>
               {DAYS.map((d, i) => (
                 <option key={d} value={i}>
                   {d}
@@ -138,12 +139,12 @@ export function AvailabilityManager({
             </select>
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Start</label>
-            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            <label htmlFor={`${uid}-2`}>Start</label>
+            <input id={`${uid}-2`} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>End</label>
-            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <label htmlFor={`${uid}-3`}>End</label>
+            <input id={`${uid}-3`} type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </div>
           <button type="submit" className="btn btn-secondary" disabled={addingRule}>
             {addingRule ? <Spinner label="Adding…" /> : "Add hours"}
@@ -177,12 +178,12 @@ export function AvailabilityManager({
           style={{ display: "flex", gap: 12, alignItems: "flex-end", marginTop: 20, flexWrap: "wrap" }}
         >
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Date</label>
-            <input type="date" value={excDate} onChange={(e) => setExcDate(e.target.value)} />
+            <label htmlFor={`${uid}-4`}>Date</label>
+            <input id={`${uid}-4`} type="date" value={excDate} onChange={(e) => setExcDate(e.target.value)} />
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Type</label>
-            <select value={excType} onChange={(e) => setExcType(e.target.value as "BLOCKED" | "ADDED")}>
+            <label htmlFor={`${uid}-5`}>Type</label>
+            <select id={`${uid}-5`} value={excType} onChange={(e) => setExcType(e.target.value as "BLOCKED" | "ADDED")}>
               <option value="BLOCKED">Blocked</option>
               <option value="ADDED">Added</option>
             </select>
@@ -194,12 +195,12 @@ export function AvailabilityManager({
           {!excAllDay && (
             <>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>Start</label>
-                <input type="time" value={excStart} onChange={(e) => setExcStart(e.target.value)} />
+                <label htmlFor={`${uid}-6`}>Start</label>
+                <input id={`${uid}-6`} type="time" value={excStart} onChange={(e) => setExcStart(e.target.value)} />
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>End</label>
-                <input type="time" value={excEnd} onChange={(e) => setExcEnd(e.target.value)} />
+                <label htmlFor={`${uid}-7`}>End</label>
+                <input id={`${uid}-7`} type="time" value={excEnd} onChange={(e) => setExcEnd(e.target.value)} />
               </div>
             </>
           )}

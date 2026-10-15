@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getUpcomingAvailability } from "@/lib/availability";
 import { ProfileTabs } from "./ProfileTabs";
 import { displayInstruments } from "@/lib/instruments";
+import { StarIcon } from "@/components/InstrumentIcon";
 
 export default async function TeacherProfilePage({
   params,
@@ -77,8 +78,12 @@ export default async function TeacherProfilePage({
         </div>
         <h1 className="p-name">{teacher.user.fullName}</h1>
         <div className="p-meta">
-          <span className="note-rating">
-            ♪♪♪♪♪ {Number(teacher.avgRating).toFixed(1)} ({teacher.reviewCount} reviews)
+          <span
+            className="note-rating"
+            aria-label={`Rated ${Number(teacher.avgRating).toFixed(1)} out of 5, ${teacher.reviewCount} reviews`}
+          >
+            <StarIcon size={16} />
+            {Number(teacher.avgRating).toFixed(1)} ({teacher.reviewCount} reviews)
           </span>
           <span>·</span>
           <span>{displayInstruments(teacher.instruments)}</span>
@@ -96,13 +101,12 @@ export default async function TeacherProfilePage({
       </div>
 
       <div className="sidebar-card">
-        <span className="eyebrow">From</span>
         <div className="price-lg">
           £{(teacher.hourlyRateMinorUnits / 100).toFixed(0)} <span>/ hour</span>
         </div>
         {nextDates.length > 0 ? (
           <p className="p-next-avail">
-            <span className="dot" />
+            <span className="dot" aria-hidden="true" />
             Next available:{" "}
             {new Date(nextDates[0]).toLocaleDateString("en-GB", {
               weekday: "short",
