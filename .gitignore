@@ -18,3 +18,7 @@ next-env.d.ts
 
 # real k8s secret values — only secret.example.yaml (a template) is committed
 k8s/secret.yaml
+
+# third-party design skills installed locally for the UI overhaul (Impeccable, Emil Kowalski, taste-skill);
+# vendored copies are large and not part of the app, see docs/idistinguishr-build-log.md
+.claude/skills/

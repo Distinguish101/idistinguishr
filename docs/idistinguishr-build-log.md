@@ -1449,3 +1449,32 @@ normalisation, "instructor" wording and test-data cleanup (§30). Infrastructure
 (ARM-native CI, deploy serialisation, the Resend domain setup) is in `idistinguishr-k8s-migration-log.md`.
 Still open from the Notion list: front-end redesign, accessibility, screen-resolution fixes, recurring
 lessons, photo upload, moving the pending-approval button, admin page and role, encryption.
+
+## 31. Design tooling for the UI overhaul (2026-10-15)
+
+Set up ahead of the planned modern, accessible redesign (Notion list: "do up the front end", "accessibility
+ui"). Installed on request, after reading the sources:
+
+- **Impeccable** ([pbakaus/impeccable](https://github.com/pbakaus/impeccable), Apache-2.0, v4.6.0): copied
+  into `.claude/skills/impeccable`. Commands such as `audit` (accessibility, performance, responsive),
+  `critique`, `typeset`, `layout`, `polish`. The `npx impeccable install` route crashed on this PC (its
+  downloaded engine exited with `0xC0000135`, a missing system library), so it was installed manually; the
+  skill documents a launcher-unavailable fallback. Its optional auto-run hooks are NOT enabled. Its
+  launcher downloads a checksummed engine from the project's GitHub releases on first use.
+- **Emil Kowalski's skills** ([emilkowalski/skills](https://github.com/emilkowalski/skills), MIT): only the
+  web UI and animation ones (`emil-design-eng`, `animate`, `animation-performance`,
+  `animation-vocabulary`, `improve-animations`, `review-animations`, `find-animation-opportunities`).
+  Markdown only. Swift, Expo and other unrelated skills left out.
+- **taste-skill** ([Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill), MIT): `taste-skill` and
+  `redesign-skill`. The former ships Node scripts (downloads freely licensed images from public archives,
+  headless-Chrome screenshots, a history file under `~/.taste-skill`). Overlaps Impeccable; if the two
+  disagree, the brief and WCAG contrast rules win. Its own description says not for dashboards or app
+  screens, so it fits the home/marketing pages only.
+- **MCP servers** in `.mcp.json`: Playwright MCP pinned to `@playwright/mcp@0.0.83` (accessibility scans,
+  responsive checks in real browsers) and the Figma remote MCP (`https://mcp.figma.com/mcp`, sign in to
+  Figma on first use). They load after a session restart and must be approved when Claude Code asks.
+- `.claude/skills/` is git-ignored (vendored third-party files, ~2 MB). `.mcp.json` is committed (no secrets).
+- Downloads were reviewed before copying: no network or file access outside each skill's stated purpose
+  was found in the markdown; the taste-skill scripts only talk to public image and archive APIs.
+- Context: two TikTok links the user shared for tool ideas could not be read (login wall and CAPTCHA, which
+  were not bypassed); the user then named the tools directly.
