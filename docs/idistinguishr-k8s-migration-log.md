@@ -816,3 +816,10 @@ be a variable while debugging the migration itself.
   its Cloudflare auto-configure: CNAMEs `rsend` and `send` plus the `resend._domainkey` DKIM TXT, all DNS
   only. Verified after ~15 min. `EMAIL_FROM="IDistinguishR <noreply@idistinguishr.com>"` is set as a plain
   env var in `k8s/deployment.yaml` (not a secret), so reset and booking emails now reach real users.
+- **Bug: migration Job skipped the new migration (found 2026-10-15).** After deploying forgot-password,
+  `/api/auth/forgot-password` returned 500: `public.password_reset_tokens does not exist`. The migrate
+  Job logged "3 migrations found ... No pending migrations" (repo has 4). Cause: the Job uses the floating
+  tag `:migrate` with the default `imagePullPolicy: IfNotPresent`, so the node kept its cached old image.
+  Fix: `imagePullPolicy: Always` in `k8s/migration-job.yaml`. Lesson: any floating tag used by a Job needs
+  Always (or a per-release tag), otherwise "Complete" can mean "ran stale code". Also: Resend's SDK
+  returns `{ error }` rather than throwing, so send errors are now logged explicitly for the reset email.

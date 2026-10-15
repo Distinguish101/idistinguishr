@@ -23,6 +23,11 @@ spec:
       containers:
         - name: migrate
           image: ghcr.io/distinguish101/idistinguishr:migrate # replace tag per release, see docs/k8s-deploy.md
+          # `migrate` is a floating tag that CI overwrites on every push. With the
+          # default IfNotPresent the node reuses its cached copy, so new migrations
+          # are silently missing ("No pending migrations") — this bit the
+          # password_reset_tokens migration. Always re-pull.
+          imagePullPolicy: Always
           command: ["npx", "prisma", "migrate", "deploy"]
           envFrom:
             - secretRef:
