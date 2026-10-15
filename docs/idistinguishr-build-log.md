@@ -1506,3 +1506,21 @@ C. Terracotta and Sage (DM Serif Display + DM Sans, terracotta actions). All 39 
 across the three pass WCAG 2.2 AA (computed in the generator, not estimated). Each mock shows a labelled
 search form, a visible focus ring, an error message with an icon (not colour alone) and 44px touch targets.
 Awaiting the user's choice before any change to the app itself.
+
+**Round 2 (same day), after feedback that round 1 "looks quite vintage".** Round 1 only varied colours and
+fonts inside one boxed, centred layout; A and C also landed on cream, serif display and terracotta, which
+the installed Impeccable guidance names as the stock AI look (and Fraunces/DM Serif as default faces). The
+user asked for different layouts and a more modern feel. Round 2 (`docs/redesign/design-options-v2.html`,
+generator `docs/redesign/build-options-v2.mjs`) changes the structure as well as the colour:
+1. **Cobalt Stage**: full-width saturated cobalt hero with huge Hanken Grotesk type, search bar straddling
+   the hero edge, instrument tiles, instructor cards with a big price.
+2. **Midnight Studio**: dark bento grid (search tile, photo tile, a live availability-slots tile,
+   asymmetric instrument tiles), Schibsted Grotesk, lime accent.
+3. **Friendly Colour Blocks**: centred headline over one pill-shaped search bar, one colour per
+   instrument that follows it into the cards, Lexend + Atkinson Hyperlegible Next (designed for
+   readability).
+All 31 colour pairs pass WCAG 2.2 AA (computed). Verification: desktop captured with headless Edge at
+1280px; phone widths could not be captured below ~500px with that tool, so real narrow-viewport checks are
+deferred to the build. Process note: the in-app browser pane's screenshots lag its scroll position, so
+headless Edge screenshots were used instead. Impeccable's `concept-seed` engine does not run on this PC,
+so its direction roll was not used; the directions were derived by hand.
