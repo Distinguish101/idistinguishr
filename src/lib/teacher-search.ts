@@ -12,6 +12,8 @@ import { normalizeInstrument, displayInstrument } from "@/lib/instruments";
 export const BOOKABLE_WHERE = {
   approvalStatus: "APPROVED",
   stripeOnboardingComplete: true,
+  // Deactivated, suspended and deleted instructors drop out of search.
+  user: { status: "ACTIVE" },
 } satisfies Prisma.TeacherProfileWhereInput;
 
 export type ResultsFilters = {

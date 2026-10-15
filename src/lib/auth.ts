@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { forgetUserStatus, getUserStatus } from "@/lib/user-status";
 import type { Role } from "@prisma/client";
 
 // MVP auth: email/password (Credentials) + Google OAuth.
@@ -44,6 +45,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!valid) return null;
 
+        // Suspended and deleted accounts can't sign in. A deactivated account
+        // can: signing in with the right password is how it's reactivated.
+        if (user.status === "SUSPENDED" || user.status === "DELETED") return null;
+        if (user.status === "DEACTIVATED") {
+          await prisma.user.update({ where: { id: user.id }, data: { status: "ACTIVE" } });
+          forgetUserStatus(user.id);
+        }
+
         return { id: user.id, email: user.email, name: user.fullName, role: user.role };
       },
     }),
@@ -56,7 +65,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role: Role }).role;
+        return token;
       }
+      // Returning null ends the session: an account that is no longer ACTIVE
+      // (suspended, deactivated, deleted) is signed out on its other devices too.
+      if ((await getUserStatus(token.id)) !== "ACTIVE") return null;
       return token;
     },
     async session({ session, token }) {

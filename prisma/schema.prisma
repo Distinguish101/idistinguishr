@@ -23,6 +23,8 @@ enum Role {
 enum UserStatus {
   ACTIVE
   SUSPENDED
+  DEACTIVATED // user-initiated, reversible: logging in again reactivates
+  DELETED     // user-initiated, permanent: personal data anonymised, records kept
 }
 
 enum OAuthProvider {

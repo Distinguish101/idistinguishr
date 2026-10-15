@@ -24,10 +24,15 @@ export default async function TimeSelectPage({
 
   const teacher = await prisma.teacherProfile.findUnique({
     where: { id: teacherId },
-    include: { user: { select: { fullName: true } } },
+    include: { user: { select: { fullName: true, status: true } } },
   });
 
-  if (!teacher || teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
+  if (
+    !teacher ||
+    teacher.approvalStatus !== "APPROVED" ||
+    !teacher.stripeOnboardingComplete ||
+    teacher.user.status !== "ACTIVE"
+  ) {
     return (
       <main className="wrap" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 640 }}>
         <h1 className="t-display-l">This instructor isn&apos;t available right now</h1>

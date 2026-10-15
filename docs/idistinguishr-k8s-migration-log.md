@@ -836,3 +836,16 @@ be a variable while debugging the migration itself.
   (`/teacher/...`, `/teachers/[id]`), the `TEACHER` role enum, the `TeacherProfile` model and code
   identifiers, so no links, sessions or data are affected. A full rename of routes/models would be a
   separate, riskier migration.
+- **Deactivate / delete account (2026-10-15, Notion list item).** New `/account` page (nav link) with two
+  actions, both blocked while the user has upcoming CONFIRMED lessons (as student or instructor).
+  *Deactivate* is reversible: `UserStatus` gains `DEACTIVATED`; instructors are hidden from search, the
+  profile page, slots and booking; logging in with the password reactivates (forgot-password also works).
+  *Delete* is permanent: `UserStatus` gains `DELETED`; the user is anonymised (name "Deleted user",
+  email `deleted-<id>@deleted.invalid`, password hash removed, reset tokens deleted), an instructor's
+  bio/credentials/photo/location are blanked, availability deleted and profile set REJECTED. Bookings,
+  payments and reviews are kept for records. Confirmation is the password (or typing DELETE for
+  password-less accounts). Any Stripe connected account is not touched.
+  Migration `20261015180000_add_user_deactivated_deleted_status` (two `ALTER TYPE ... ADD VALUE`).
+  **Also closed a gap:** `SUSPENDED` was never enforced anywhere. Login now rejects SUSPENDED/DELETED, and
+  the Auth.js `jwt` callback checks the account is still ACTIVE (via `src/lib/user-status.ts`, cached per
+  pod for 60s) and ends the session otherwise, so sessions on other devices stop working too.

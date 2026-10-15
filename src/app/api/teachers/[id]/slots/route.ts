@@ -16,8 +16,16 @@ export async function GET(
     return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
   }
 
-  const teacher = await prisma.teacherProfile.findUnique({ where: { id } });
-  if (!teacher || teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
+  const teacher = await prisma.teacherProfile.findUnique({
+    where: { id },
+    include: { user: { select: { status: true } } },
+  });
+  if (
+    !teacher ||
+    teacher.approvalStatus !== "APPROVED" ||
+    !teacher.stripeOnboardingComplete ||
+    teacher.user.status !== "ACTIVE"
+  ) {
     return NextResponse.json({ error: "Instructor not bookable" }, { status: 404 });
   }
 

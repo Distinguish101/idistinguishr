@@ -26,6 +26,7 @@ export async function NavBar() {
                 <Link href="/dashboard">Dashboard</Link>
               )}
               {isAdminEmail(session.user.email) && <Link href="/admin">Admin</Link>}
+              <Link href="/account">Account</Link>
               <SignOutButton />
             </>
           ) : (

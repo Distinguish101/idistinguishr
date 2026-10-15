@@ -25,7 +25,13 @@ export async function POST(req: Request) {
     where: { tokenHash },
     include: { user: { select: { id: true, email: true, status: true } } },
   });
-  if (!record || record.usedAt || record.expiresAt < new Date() || record.user.status !== "ACTIVE") {
+  if (
+    !record ||
+    record.usedAt ||
+    record.expiresAt < new Date() ||
+    record.user.status === "SUSPENDED" ||
+    record.user.status === "DELETED"
+  ) {
     return NextResponse.json({ error: INVALID }, { status: 400 });
   }
 

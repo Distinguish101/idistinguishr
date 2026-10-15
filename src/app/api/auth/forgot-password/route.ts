@@ -18,8 +18,9 @@ export async function POST(req: Request) {
   }
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  // Google-only accounts have no password to reset; suspended accounts get nothing.
-  if (!user || !user.passwordHash || user.status !== "ACTIVE") {
+  // Google-only accounts have no password to reset; suspended and deleted
+  // accounts get nothing. Deactivated ones can reset (logging in reactivates).
+  if (!user || !user.passwordHash || user.status === "SUSPENDED" || user.status === "DELETED") {
     return NextResponse.json(GENERIC);
   }
 

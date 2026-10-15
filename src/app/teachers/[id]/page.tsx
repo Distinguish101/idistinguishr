@@ -19,7 +19,7 @@ export default async function TeacherProfilePage({
 
   const teacher = await prisma.teacherProfile.findUnique({
     where: { id },
-    include: { user: { select: { fullName: true } } },
+    include: { user: { select: { fullName: true, status: true } } },
   });
 
   if (!teacher) notFound();
@@ -27,7 +27,11 @@ export default async function TeacherProfilePage({
   // Edge case from the spec: teacher exists but isn't bookable (pending
   // approval, or Stripe onboarding incomplete) — a real 404 would be
   // misleading since the profile does exist, just isn't live yet.
-  if (teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
+  if (
+    teacher.approvalStatus !== "APPROVED" ||
+    !teacher.stripeOnboardingComplete ||
+    teacher.user.status !== "ACTIVE"
+  ) {
     return (
       <main className="wrap" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 640 }}>
         <h1 className="t-display-l">This instructor isn&apos;t available right now</h1>

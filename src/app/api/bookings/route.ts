@@ -45,8 +45,16 @@ export async function POST(req: Request) {
   }
   const { teacherId, date, startTime, durationMinutes, format } = parsed.data;
 
-  const teacher = await prisma.teacherProfile.findUnique({ where: { id: teacherId } });
-  if (!teacher || teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
+  const teacher = await prisma.teacherProfile.findUnique({
+    where: { id: teacherId },
+    include: { user: { select: { status: true } } },
+  });
+  if (
+    !teacher ||
+    teacher.approvalStatus !== "APPROVED" ||
+    !teacher.stripeOnboardingComplete ||
+    teacher.user.status !== "ACTIVE"
+  ) {
     return NextResponse.json({ error: "This instructor isn't bookable right now." }, { status: 404 });
   }
   if (!teacher.formatsOffered.includes(format)) {
