@@ -1314,6 +1314,84 @@ silent because nothing was actually wrong. The §24 fix holds under a
 second, independent real test. Test user, profile, and Stripe account all
 cleaned up afterward.
 
+## 27. Password strength and forgotten password (Notion list: "password strength check", "forgotten password")
+
+**Password strength.** `src/lib/password.ts` (`passwordIssue`): at least 8 characters, a letter and a digit,
+not on a small list of common passwords, not one repeated character, and not containing the email's
+local part. Enforced at signup both in the browser (`AuthForm.tsx`, with a hint under the field) and on the
+server (`/api/auth/signup`). Deliberately **not** applied to login, so existing accounts with weaker
+passwords can still get in (checked live with the admin account).
+
+**Forgotten password.** A "Forgot password?" link on the Log in tab leads to `/forgot-password`; the
+emailed link leads to `/reset-password?token=...`. New table `password_reset_tokens` (additive migration
+`20261015120000_add_password_reset_tokens`). Design choices: only the SHA-256 of the token is stored;
+single use (claimed atomically in a transaction, which also voids the account's other open links);
+1 hour expiry; at most 3 emails per account per hour; the form gives the same answer whether or not the
+address has an account, and the email is sent without awaiting so response time doesn't leak it either;
+the new password goes through the same strength rules. A reset does not revoke JWT sessions already open.
+
+**Email actually had to be made to work (found by testing it live), in three layers:**
+1. The sender was Resend's shared `onboarding@resend.dev`, which only delivers to the Resend account
+   owner. Verified `idistinguishr.com` in Resend (Cloudflare auto-configure, DNS-only records) and set
+   `EMAIL_FROM="IDistinguishR <noreply@idistinguishr.com>"` as a plain env var in `k8s/deployment.yaml`.
+   `SITE_URL` is likewise pinned there (the secret example still held the old Vercel URL).
+2. The first live attempt returned 500 because the migration had not run: the migration Job used the
+   floating `:migrate` image tag with the default pull policy, so the node reused a cached image and
+   reported "No pending migrations". Fixed with `imagePullPolicy: Always` in `k8s/migration-job.yaml`.
+3. With that fixed the email still didn't arrive: the Resend SDK returns `{ error }` rather than
+   throwing, so the code was silently ignoring a **401 "API key is invalid"**. The cluster's
+   `RESEND_API_KEY` was wrong, so no email (booking confirmations included) had been sending since the
+   move off Vercel. Reset emails now log Resend rejections; the key was replaced via a one-field secret
+   patch and the email arrived. (Booking confirmations and admin alerts still swallow `{ error }` the old
+   way; worth the same logging fix.)
+
+## 28. Deactivate and delete account (Notion list: "delete account, deactivate account")
+
+New `/account` page, linked from the nav. Both actions are blocked while the user has upcoming
+CONFIRMED lessons (as student or instructor), so nobody is left stranded.
+
+- **Deactivate** is reversible: `UserStatus` gains `DEACTIVATED`. Instructors drop out of search, their
+  profile page, slot lookup and booking (`BOOKABLE_WHERE` and the four individual checks now require an
+  ACTIVE user). Logging in with the password reactivates the account; forgot-password also works.
+- **Delete** is permanent: `UserStatus` gains `DELETED`. The user row is anonymised (name "Deleted
+  user", email `deleted-<id>@deleted.invalid`, password hash removed), reset tokens deleted, an
+  instructor's bio/credentials/photo/location blanked, availability deleted and profile set to REJECTED.
+  Bookings, payments and reviews are kept for record-keeping. Confirmation is the password, or typing
+  DELETE for accounts without one. A linked Stripe connected account is not touched.
+- Migration `20261015180000_add_user_deactivated_deleted_status` (two `ADD VALUE`s). First migration
+  to run after the `imagePullPolicy` fix, and it applied correctly.
+- **Gap closed along the way:** `SUSPENDED` had never been enforced. Login now refuses SUSPENDED and
+  DELETED accounts, and the Auth.js `jwt` callback ends any session whose account is no longer ACTIVE
+  (`src/lib/user-status.ts`, cached 60 s per pod), so other devices are signed out too.
+- Not yet verified live end to end (needs a throwaway account; the assistant may not create accounts on
+  the live site). Test plan: sign up, log in, deactivate, log back in, delete, confirm login is refused.
+
+## 29. Results filters, calendar, sign-out, spinners (Notion list items)
+
+- **Filters:** price min/max cross-validate through the native `min`/`max` attributes (`PriceRange.tsx`);
+  the Apply filters button moved to the top of the column next to a Reset button that clears every input.
+  Reset first appeared to do nothing because uncontrolled inputs persist across Next soft navigation;
+  fixed by keying the form on the current filter state. Apply/Reset labels no longer wrap.
+- **Calendar card** is sized by measurement (`SlotPicker.tsx`) to end a constant 24px above the screen
+  bottom. The suggested `calc(100vh - 200px)` was wrong (card sat 143px below the fold at 1024x768).
+  Limitation: on screens shorter than the content's natural height (about 508px) it can't shrink.
+- **Sign-out** landed on `https://0.0.0.0:3000/`, the pod's internal address behind the proxy.
+  Fixed with `AUTH_URL` in the Deployment plus client-side navigation after `signOut({ redirect: false })`.
+- **Spinners:** sign-out and the Stripe connect link now show one. Switching between Sign up and Log in
+  clears a stale error message.
+
+## 30. Instrument storage, wording, test data (Notion list: "store things in all lower case", "use instructor not teacher")
+
+- **Instruments stored canonical lowercase** (`src/lib/instruments.ts`: normalize on write, capitalise
+  on display). Search matches both canonical and capitalised legacy values. The profile API normalises
+  and de-duplicates; seed data lowercased. Fixes "piano" and "Piano" being treated as different.
+- **"Instructor" instead of "teacher"** in all user-visible text (pages, errors, admin emails, terms,
+  privacy, titles). URLs (`/teacher/...`), the `TEACHER` role, the `TeacherProfile` model and code
+  identifiers are unchanged on purpose, to avoid breaking links or needing a data migration.
+- Removed the "accordion" and "piano" test chips and the "teacher 1" test account (SQL run by the user
+  in Neon's console, as per the standing rule that production DB writes go through the user).
+- README rewritten for employers, with a hardware and infrastructure section.
+
 ---
 
 ## Where things stand
@@ -1362,3 +1440,12 @@ to be manually running for any local Stripe webhook to land (§17), and
 this dev environment's occasional dev-server/browser instability under
 sustained automated use (§19) — no root cause found yet, only
 "restart it" as a working mitigation.
+
+**Since the move to k3s (Oct 2026), §27-§30:** password strength and a full forgotten-password flow
+(§27, including getting real email delivery working: verified sender domain, a stale migration image,
+and an invalid Resend key), account deactivate/delete plus real enforcement of account status in login
+and sessions (§28), a filters/calendar/sign-out/spinner fixes pass (§29), and instrument-storage
+normalisation, "instructor" wording and test-data cleanup (§30). Infrastructure side of the same period
+(ARM-native CI, deploy serialisation, the Resend domain setup) is in `idistinguishr-k8s-migration-log.md`.
+Still open from the Notion list: front-end redesign, accessibility, screen-resolution fixes, recurring
+lessons, photo upload, moving the pending-approval button, admin page and role, encryption.
