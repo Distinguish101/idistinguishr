@@ -823,3 +823,10 @@ be a variable while debugging the migration itself.
   Fix: `imagePullPolicy: Always` in `k8s/migration-job.yaml`. Lesson: any floating tag used by a Job needs
   Always (or a per-release tag), otherwise "Complete" can mean "ran stale code". Also: Resend's SDK
   returns `{ error }` rather than throwing, so send errors are now logged explicitly for the reset email.
+- **Bug: RESEND_API_KEY in the cluster was invalid (found 2026-10-15).** Once the migration and logging
+  fixes were in, pod logs showed `Resend rejected password reset email: API key is invalid (401)`. So no
+  Resend email (booking confirmations included) had been sending from the k8s deployment. User created a
+  new sending-only key scoped to idistinguishr.com in Resend and put it in a one-field patch file; applied
+  with `kubectl patch secret idistinguishr-secrets --type=merge --patch-file=...`, deployment restarted,
+  patch file deleted. Note: the key value was displayed to the assistant by a file-change notice, so it is
+  worth rotating once testing is finished.
