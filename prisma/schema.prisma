@@ -44,8 +44,25 @@ model User {
   teacherProfile TeacherProfile?
   bookings       Booking[]       @relation("StudentBookings")
   reviewsWritten Review[]        @relation("StudentReviews")
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// Single-use, expiring password-reset links. Only the SHA-256 hash of the
+// token is stored (the raw token exists only in the emailed link), so a
+// database leak can't be turned into account takeovers.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 // ---------------------------------------------------------------------------

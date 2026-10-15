@@ -5,8 +5,9 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 // Resend's shared onboarding@resend.dev sender works without verifying a
 // domain, but in that mode only delivers to the Resend account's own
 // email — fine for confirming the integration works, not for real
-// students. Swap in a verified domain's address when that's set up.
-const FROM = "IDistinguishR <onboarding@resend.dev>";
+// students. Set EMAIL_FROM to an address on a domain verified in Resend
+// (e.g. "IDistinguishR <noreply@idistinguishr.com>") to reach real users.
+const FROM = process.env.EMAIL_FROM ?? "IDistinguishR <onboarding@resend.dev>";
 
 // No existing "site URL" env var in this app (every other link is a
 // relative next/link) — this is the one email that needs an absolute URL,
@@ -62,6 +63,34 @@ export async function sendBookingConfirmationEmail(params: {
     // it, re-charging nothing but re-attempting a Payment row that
     // already exists). Log and move on.
     console.error("Failed to send booking confirmation email:", err);
+  }
+}
+
+export async function sendPasswordResetEmail(params: { to: string; fullName: string; token: string }) {
+  const link = `${SITE_URL}/reset-password?token=${encodeURIComponent(params.token)}`;
+
+  if (!resend) {
+    console.warn("RESEND_API_KEY not set — password reset email not sent");
+    // Local development convenience only; never log a live reset link in production.
+    if (process.env.NODE_ENV !== "production") console.log(`[dev] password reset link: ${link}`);
+    return;
+  }
+
+  const name = params.fullName.replace(/[<>&"]/g, "");
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: [params.to],
+      subject: "Reset your IDistinguishR password",
+      html: `
+        <p>Hi ${name},</p>
+        <p>Someone asked to reset the password for your IDistinguishR account. Use the link below to choose a new one. It works once and expires in 1 hour.</p>
+        <p><a href="${link}">Reset your password</a></p>
+        <p>If you didn't ask for this, you can ignore this email — your password won't change.</p>
+      `,
+    });
+  } catch (err) {
+    console.error("Failed to send password reset email:", err);
   }
 }
 

@@ -777,3 +777,38 @@ be a variable while debugging the migration itself.
   config value (just an address, not a credential), same reasoning as the earlier `SITE_URL` fix, so no
   Notepad hand-off needed. Restarted the Deployment to pick it up; user to confirm `/admin` access
   themselves (their own real account, not something this session can test).
+
+## 2026-10-14/15: CI on ARM, UI fixes, instrument cleanup, forgotten password
+
+- **CI is now ARM-native.** The cluster is aarch64 (Oracle Ampere), and the multi-arch build was running
+  arm64 under QEMU on an x86 runner, which made runs very slow (20+ min) and let several overlap. Moved
+  the build job to the `ubuntu-24.04-arm` runner, dropped QEMU, and build `linux/arm64` only (~3 min).
+  Added `concurrency`: builds cancel older builds on the same ref; the deploy job uses the group
+  `production-deploy` with `cancel-in-progress: false`, so deploys are serialized and an older run can no
+  longer roll the cluster back. To go back to x86 later: native amd64 matrix + manifest merge.
+- **Sign-out landed on `https://0.0.0.0:3000/`.** Same behind-proxy bug class as before: Auth.js built
+  the redirect from the pod's internal address. Fixed with `AUTH_URL=https://idistinguishr.com` in
+  `k8s/deployment.yaml` plus a client-side `signOut({ redirect: false })` then `location.assign("/")`.
+  Verified live.
+- **UI:** results filters (min/max price cross-validation, Reset now clears inputs via a `key` on the
+  form, Apply label no longer wraps); calendar card sized by measurement; stale auth error cleared when
+  switching Sign up / Log in; spinners on sign-out and the Stripe connect link.
+- **Password strength** (signup only, client and server, `src/lib/password.ts`): 8+ chars, letter and
+  digit, not a common password, no single repeated character, must not contain the email local part.
+  Login is deliberately unchanged so existing weaker passwords still work.
+- **Instruments stored canonical lowercase** (`src/lib/instruments.ts`); display capitalised by helper;
+  search uses `hasSome` over canonical and display forms for legacy rows. Seed data lowercased. Removed
+  the "accordion" and "piano" test leftovers and the "teacher 1" test account (user ran the SQL in Neon).
+- **README** gained a hardware and infrastructure section.
+- **Forgotten password.** New table `password_reset_tokens` (additive migration
+  `20261015120000_add_password_reset_tokens`, run by the deploy migration Job). Only the SHA-256 of the
+  token is stored; links are single-use, expire after 1 hour, max 3 per account per hour; responses are
+  generic so the form can't enumerate accounts; resetting invalidates the account's other outstanding
+  links. Routes `/api/auth/forgot-password` and `/api/auth/reset-password`; pages `/forgot-password`
+  and `/reset-password`; "Forgot password?" link on the Log in tab. `SITE_URL` is now set explicitly in
+  the Deployment (the secret example still held the old Vercel URL, which would have put wrong links in
+  emails). Known limits: existing JWT sessions are not revoked by a reset.
+- **Prerequisite for real delivery:** the Resend sender is still `onboarding@resend.dev`, which only
+  delivers to the Resend account owner's address. To email real users: verify `idistinguishr.com` in
+  Resend (add the SPF/DKIM records in Cloudflare, DNS only), then set `EMAIL_FROM`, for example
+  `IDistinguishR <noreply@idistinguishr.com>`, in the secret. This also fixes booking confirmations.

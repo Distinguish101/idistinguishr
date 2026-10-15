@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
 import { Spinner } from "@/components/Spinner";
@@ -180,6 +181,12 @@ export function AuthForm({
             <p className="field-hint">At least 8 characters, with a letter and a number.</p>
           )}
         </div>
+
+        {mode === "login" && (
+          <p style={{ margin: "-4px 0 12px", fontSize: 14 }}>
+            <Link href="/forgot-password">Forgot password?</Link>
+          </p>
+        )}
 
         {error && <p className="field-error">{error}</p>}
 

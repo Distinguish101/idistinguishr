@@ -51,6 +51,11 @@ spec:
             # AUTH_URL pins the public origin Auth.js builds absolute URLs from.
             - name: AUTH_URL
               value: https://idistinguishr.com
+            # Absolute links in emails (password reset, admin alerts). Explicit
+            # env wins over envFrom, so a stale SITE_URL in the secret (the
+            # example still says the old Vercel URL) can't leak into emails.
+            - name: SITE_URL
+              value: https://idistinguishr.com
             # @vercel/otel traces 100% of requests by default — including
             # every liveness/readiness probe hit (2 pods x every ~10-15s),
             # which OOMKilled Jaeger's Badger storage within days of
