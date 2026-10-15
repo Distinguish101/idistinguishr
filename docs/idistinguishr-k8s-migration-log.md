@@ -812,3 +812,7 @@ be a variable while debugging the migration itself.
   delivers to the Resend account owner's address. To email real users: verify `idistinguishr.com` in
   Resend (add the SPF/DKIM records in Cloudflare, DNS only), then set `EMAIL_FROM`, for example
   `IDistinguishR <noreply@idistinguishr.com>`, in the secret. This also fixes booking confirmations.
+- **Resend domain verified (2026-10-15).** Added `idistinguishr.com` (Ireland, eu-west-1) in Resend using
+  its Cloudflare auto-configure: CNAMEs `rsend` and `send` plus the `resend._domainkey` DKIM TXT, all DNS
+  only. Verified after ~15 min. `EMAIL_FROM="IDistinguishR <noreply@idistinguishr.com>"` is set as a plain
+  env var in `k8s/deployment.yaml` (not a secret), so reset and booking emails now reach real users.

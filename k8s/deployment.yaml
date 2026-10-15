@@ -56,6 +56,11 @@ spec:
             # example still says the old Vercel URL) can't leak into emails.
             - name: SITE_URL
               value: https://idistinguishr.com
+            # Sender address on the domain verified in Resend (DNS records in
+            # Cloudflare). Without this the app falls back to Resend's shared
+            # onboarding@resend.dev, which only delivers to the account owner.
+            - name: EMAIL_FROM
+              value: "IDistinguishR <noreply@idistinguishr.com>"
             # @vercel/otel traces 100% of requests by default — including
             # every liveness/readiness probe hit (2 pods x every ~10-15s),
             # which OOMKilled Jaeger's Badger storage within days of
