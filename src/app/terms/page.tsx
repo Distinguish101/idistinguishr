@@ -18,12 +18,12 @@ export default function TermsPage() {
       <div className="legal-content">
         <p>
           These terms cover your use of IDistinguishR, a marketplace connecting students with
-          independent instrument teachers in the UK. By creating an account, you agree to them.
+          independent instrument instructors in the UK. By creating an account, you agree to them.
         </p>
 
         <h3>1. What we are</h3>
         <p>
-          IDistinguishR is a booking and payments platform. Teachers listed on the site are
+          IDistinguishR is a booking and payments platform. Instructors listed on the site are
           independent contractors, not our employees — we don&apos;t control how they teach, and
           we&apos;re not a party to the lesson itself, only to the booking and payment.
         </p>
@@ -31,7 +31,7 @@ export default function TermsPage() {
         <h3>2. Booking and payment</h3>
         <p>
           Payment is taken in full at the time of booking and held until the lesson takes place.
-          A platform fee (currently 10%) is deducted from the amount paid to the teacher; students
+          A platform fee (currently 10%) is deducted from the amount paid to the instructor; students
           are charged the listed hourly rate with no additional fee added on top.
         </p>
 
@@ -43,9 +43,9 @@ export default function TermsPage() {
           the standard window are handled case by case, not automatically.
         </p>
 
-        <h3>4. Teacher approval</h3>
+        <h3>4. Instructor approval</h3>
         <p>
-          Teachers are manually reviewed before their profile goes live. Approval isn&apos;t a
+          Instructors are manually reviewed before their profile goes live. Approval isn&apos;t a
           guarantee of teaching quality — please use reviews and your own judgement.
         </p>
 

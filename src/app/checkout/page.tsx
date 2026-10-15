@@ -35,10 +35,10 @@ export default async function CheckoutPage({
       <main className="wrap" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 560 }}>
         <h1 className="t-display-l">No booking to check out</h1>
         <p className="t-soft" style={{ marginTop: 12 }}>
-          Pick a teacher and a time first.
+          Pick an instructor and a time first.
         </p>
         <Link href="/results" className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
-          Browse teachers
+          Browse instructors
         </Link>
       </main>
     );
@@ -54,7 +54,7 @@ export default async function CheckoutPage({
       <main className="wrap" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 560 }}>
         <h1 className="t-display-l">Booking not found</h1>
         <Link href="/results" className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
-          Browse teachers
+          Browse instructors
         </Link>
       </main>
     );
@@ -97,7 +97,7 @@ export default async function CheckoutPage({
 
       <div className="card">
         <div className="order-row">
-          <span>Teacher</span>
+          <span>Instructor</span>
           <span>{booking.teacher.user.fullName}</span>
         </div>
         <div className="order-row">

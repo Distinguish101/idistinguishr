@@ -30,12 +30,12 @@ export default async function TeacherProfilePage({
   if (teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
     return (
       <main className="wrap" style={{ paddingTop: 60, paddingBottom: 80, maxWidth: 640 }}>
-        <h1 className="t-display-l">This teacher isn&apos;t available right now</h1>
+        <h1 className="t-display-l">This instructor isn&apos;t available right now</h1>
         <p className="t-soft" style={{ marginTop: 12 }}>
-          Their profile is still being reviewed or set up. Try browsing other teachers instead.
+          Their profile is still being reviewed or set up. Try browsing other instructors instead.
         </p>
         <Link href="/results" className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
-          Browse teachers
+          Browse instructors
         </Link>
       </main>
     );

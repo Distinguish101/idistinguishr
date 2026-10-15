@@ -187,7 +187,7 @@ export function SlotPicker({
         </p>
       ) : dates.size === 0 ? (
         <p className="t-soft" style={{ marginTop: 28 }}>
-          No open slots in the next two weeks — check back soon or try another teacher.
+          No open slots in the next two weeks — check back soon or try another instructor.
         </p>
       ) : (
         <div className="cal-layout">

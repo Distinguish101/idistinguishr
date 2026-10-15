@@ -1,5 +1,5 @@
 import { PageLoading } from "@/components/PageLoading";
 
 export default function Loading() {
-  return <PageLoading label="Loading teacher profile…" />;
+  return <PageLoading label="Loading instructor profile…" />;
 }

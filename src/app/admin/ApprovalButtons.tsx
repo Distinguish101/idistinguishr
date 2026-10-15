@@ -21,7 +21,7 @@ export function ApprovalButtons({ teacherId }: { teacherId: string }) {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Couldn't update this teacher.");
+      setError(data.error ?? "Couldn't update this instructor.");
       return;
     }
     router.refresh();

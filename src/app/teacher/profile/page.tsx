@@ -22,7 +22,7 @@ export default async function TeacherProfilePage() {
     <main className="wrap" style={{ paddingTop: 40, paddingBottom: 64, maxWidth: 640 }}>
       <span className="eyebrow">US-25</span>
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
-        Your teacher profile
+        Your instructor profile
       </h1>
       <p className="t-soft" style={{ marginBottom: 24 }}>
         {profile

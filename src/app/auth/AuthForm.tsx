@@ -151,7 +151,7 @@ export function AuthForm({
                 <label>I am a...</label>
                 <select value={role} onChange={(e) => setRole(e.target.value as "STUDENT" | "TEACHER")}>
                   <option value="STUDENT">Student, looking for lessons</option>
-                  <option value="TEACHER">Teacher, offering lessons</option>
+                  <option value="TEACHER">Instructor, offering lessons</option>
                 </select>
               </div>
             )}

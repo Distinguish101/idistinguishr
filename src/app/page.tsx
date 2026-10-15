@@ -18,9 +18,9 @@ export default async function HomePage() {
         <div className="wrap hero-grid">
           <div>
             <span className="eyebrow">Private lessons, any instrument</span>
-            <h1 className="hero-h1">Find a teacher who makes you want to practice.</h1>
+            <h1 className="hero-h1">Find an instructor who makes you want to practice.</h1>
             <p className="hero-sub">
-              Search real teachers by instrument, price, and availability — book a lesson in
+              Search real instructors by instrument, price, and availability — book a lesson in
               minutes, online or in person.
             </p>
             <form action="/results" method="get" className="search-card">
@@ -47,7 +47,7 @@ export default async function HomePage() {
             </form>
             {instruments.length === 0 ? (
               <p className="field-hint" style={{ marginTop: 12 }}>
-                No teachers are live yet — check back soon.
+                No instructors are live yet — check back soon.
               </p>
             ) : (
               <div className="chip-picker">
@@ -65,7 +65,7 @@ export default async function HomePage() {
           <div className="hero-art">
             <Image
               src="https://images.unsplash.com/photo-1758524944402-1903b38f848f?fm=jpg&q=80&w=1200&auto=format&fit=crop"
-              alt="A teacher guiding a student through a guitar lesson"
+              alt="An instructor guiding a student through a guitar lesson"
               width={800}
               height={800}
               priority
@@ -86,12 +86,12 @@ export default async function HomePage() {
             <div className="step">
               <div className="idx">01</div>
               <h3>Search</h3>
-              <p>Filter by instrument, price, and format to find teachers who fit your goals.</p>
+              <p>Filter by instrument, price, and format to find instructors who fit your goals.</p>
             </div>
             <div className="step">
               <div className="idx">02</div>
               <h3>Pick a time</h3>
-              <p>Browse each teacher&apos;s live availability and choose a slot that works.</p>
+              <p>Browse each instructor&apos;s live availability and choose a slot that works.</p>
             </div>
             <div className="step">
               <div className="idx">03</div>

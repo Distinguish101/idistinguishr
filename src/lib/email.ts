@@ -111,7 +111,7 @@ export async function sendTeacherReviewNeededEmail(params: {
     .filter(Boolean);
 
   if (!resend || adminEmails.length === 0) {
-    console.warn("RESEND_API_KEY or ADMIN_EMAILS not set — skipping teacher review notification");
+    console.warn("RESEND_API_KEY or ADMIN_EMAILS not set — skipping instructor review notification");
     return;
   }
 
@@ -119,7 +119,7 @@ export async function sendTeacherReviewNeededEmail(params: {
     await resend.emails.send({
       from: FROM,
       to: adminEmails,
-      subject: `Teacher profile needs review — ${params.teacherName}`,
+      subject: `Instructor profile needs review — ${params.teacherName}`,
       html: `
         <p>${params.teacherName} (${params.teacherEmail}) finished Stripe onboarding, but the automated
         first-pass review didn't approve them outright:</p>
@@ -171,7 +171,7 @@ export async function sendWebhookVerificationFailedAlert(params: {
         <p>This usually means <code>STRIPE_WEBHOOK_SECRET</code> or
         <code>STRIPE_THIN_WEBHOOK_SECRET</code> in Vercel's env vars no longer matches the
         signing secret on the actual Stripe endpoint/event destination — booking confirmations,
-        Stripe Connect status syncing, and automated teacher vetting all silently stop working
+        Stripe Connect status syncing, and automated instructor vetting all silently stop working
         when this happens. Check <a href="https://dashboard.stripe.com/webhooks">Stripe's
         webhooks dashboard</a> for delivery failures, and compare against what's in
         <a href="https://vercel.com/idistinguish/idistinguishr/settings/environment-variables">Vercel's

@@ -53,7 +53,7 @@ export default async function ConfirmationPage({
       <main className="confirm-shell">
         <h1 className="t-display-l">This booking was cancelled</h1>
         <Link href="/results" className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
-          Browse teachers
+          Browse instructors
         </Link>
       </main>
     );
@@ -76,7 +76,7 @@ export default async function ConfirmationPage({
 
       <div className="confirm-card">
         <div className="confirm-row">
-          <span>Teacher</span>
+          <span>Instructor</span>
           <span>{booking.teacher.user.fullName}</span>
         </div>
         <div className="confirm-row">

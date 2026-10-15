@@ -830,3 +830,9 @@ be a variable while debugging the migration itself.
   with `kubectl patch secret idistinguishr-secrets --type=merge --patch-file=...`, deployment restarted,
   patch file deleted. Note: the key value was displayed to the assistant by a file-change notice, so it is
   worth rotating once testing is finished.
+- **"Instructor" instead of "teacher" (2026-10-15, Notion list item).** Changed user-visible wording only
+  (home page, sign-up role option, results/booking/checkout/confirmation/dashboard text, admin heading and
+  emails, terms, privacy, page titles, API error messages). Deliberately unchanged: URL paths
+  (`/teacher/...`, `/teachers/[id]`), the `TEACHER` role enum, the `TeacherProfile` model and code
+  identifiers, so no links, sessions or data are affected. A full rename of routes/models would be a
+  separate, riskier migration.

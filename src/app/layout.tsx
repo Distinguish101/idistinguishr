@@ -4,8 +4,8 @@ import { NavBar } from "@/components/NavBar";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "IDistinguishR — Find your teacher",
-  description: "Find and book instrument teachers, online or in person.",
+  title: "IDistinguishR — Find your instructor",
+  description: "Find and book instrument instructors, online or in person.",
 };
 
 export default function RootLayout({

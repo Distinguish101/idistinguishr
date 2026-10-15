@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     );
   }
   if (!booking.teacher.stripeAccountId) {
-    return NextResponse.json({ error: "This teacher isn't set up to receive payments yet." }, { status: 400 });
+    return NextResponse.json({ error: "This instructor isn't set up to receive payments yet." }, { status: 400 });
   }
 
   const platformFee = platformFeeForAmount(booking.priceTotalMinorUnits);

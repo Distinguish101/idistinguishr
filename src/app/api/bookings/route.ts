@@ -47,10 +47,10 @@ export async function POST(req: Request) {
 
   const teacher = await prisma.teacherProfile.findUnique({ where: { id: teacherId } });
   if (!teacher || teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
-    return NextResponse.json({ error: "This teacher isn't bookable right now." }, { status: 404 });
+    return NextResponse.json({ error: "This instructor isn't bookable right now." }, { status: 404 });
   }
   if (!teacher.formatsOffered.includes(format)) {
-    return NextResponse.json({ error: "This teacher doesn't offer that format." }, { status: 400 });
+    return NextResponse.json({ error: "This instructor doesn't offer that format." }, { status: 400 });
   }
 
   // Re-validate server-side against freshly computed slots rather than

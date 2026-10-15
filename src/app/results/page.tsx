@@ -180,7 +180,7 @@ export default async function ResultsPage({
         <div>
           {teachers.length === 0 ? (
             <div className="empty-state">
-              <p>No teachers match — try adjusting your filters.</p>
+              <p>No instructors match — try adjusting your filters.</p>
             </div>
           ) : (
             <>

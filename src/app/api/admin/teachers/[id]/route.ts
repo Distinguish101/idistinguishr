@@ -23,7 +23,7 @@ export async function PATCH(
   const { id } = await params;
   const profile = await prisma.teacherProfile.findUnique({ where: { id } });
   if (!profile) {
-    return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+    return NextResponse.json({ error: "Instructor not found" }, { status: 404 });
   }
 
   await prisma.teacherProfile.update({

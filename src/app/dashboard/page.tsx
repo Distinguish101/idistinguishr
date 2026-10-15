@@ -70,9 +70,9 @@ export default async function DashboardPage({
 
       {totalBookings === 0 ? (
         <div className="empty-state">
-          <p>No lessons yet — find a teacher and book your first one.</p>
+          <p>No lessons yet — find an instructor and book your first one.</p>
           <Link href="/results" className="btn btn-primary" style={{ marginTop: 16, display: "inline-block" }}>
-            Find a Teacher
+            Find an Instructor
           </Link>
         </div>
       ) : bookings.length === 0 ? (

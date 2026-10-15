@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <h3>1. What we collect</h3>
         <p>
           Account details you provide directly: name, email, and password (stored as a salted
-          hash, never in plain text). Teachers additionally provide a bio, instruments, rate,
+          hash, never in plain text). Instructors additionally provide a bio, instruments, rate,
           location, and credentials for their public profile. Booking history — lesson dates,
           formats, and prices — is tied to your account.
         </p>
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
         <h3>4. Who can see what</h3>
         <p>
           A teacher&apos;s public profile (bio, instruments, rate, reviews) is visible to anyone
-          browsing the site once approved. A student&apos;s name is visible to a teacher they&apos;ve
+          browsing the site once approved. A student&apos;s name is visible to an instructor they&apos;ve
           booked a lesson with, and vice versa — this is necessary to actually run the lesson.
         </p>
 

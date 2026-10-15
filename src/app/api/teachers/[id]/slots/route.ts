@@ -18,7 +18,7 @@ export async function GET(
 
   const teacher = await prisma.teacherProfile.findUnique({ where: { id } });
   if (!teacher || teacher.approvalStatus !== "APPROVED" || !teacher.stripeOnboardingComplete) {
-    return NextResponse.json({ error: "Teacher not bookable" }, { status: 404 });
+    return NextResponse.json({ error: "Instructor not bookable" }, { status: 404 });
   }
 
   const slots = await getBookableSlots(id, duration, 14);
