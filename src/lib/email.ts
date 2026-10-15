@@ -78,7 +78,8 @@ export async function sendPasswordResetEmail(params: { to: string; fullName: str
 
   const name = params.fullName.replace(/[<>&"]/g, "");
   try {
-    await resend.emails.send({
+    // The SDK returns { error } for API-level rejections instead of throwing.
+    const { error } = await resend.emails.send({
       from: FROM,
       to: [params.to],
       subject: "Reset your IDistinguishR password",
@@ -89,6 +90,7 @@ export async function sendPasswordResetEmail(params: { to: string; fullName: str
         <p>If you didn't ask for this, you can ignore this email — your password won't change.</p>
       `,
     });
+    if (error) console.error("Resend rejected password reset email:", error);
   } catch (err) {
     console.error("Failed to send password reset email:", err);
   }
