@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Privacy — IDistinguishR" };
 
@@ -10,7 +11,7 @@ export default function PrivacyPage() {
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
         Privacy Policy
       </h1>
-      <p className="t-soft" style={{ marginBottom: 32 }}>Last updated: August 2026</p>
+      <p className="t-soft" style={{ marginBottom: 32 }}>Last updated: October 2026</p>
 
       <div className="legal-content">
         <p>
@@ -39,22 +40,29 @@ export default function PrivacyPage() {
 
         <h3>4. Who can see what</h3>
         <p>
-          A teacher&apos;s public profile (bio, instruments, rate, reviews) is visible to anyone
+          An instructor&apos;s public profile (bio, instruments, rate, reviews) is visible to anyone
           browsing the site once approved. A student&apos;s name is visible to an instructor they&apos;ve
           booked a lesson with, and vice versa — this is necessary to actually run the lesson.
         </p>
 
-        <h3>5. How long we keep it</h3>
+        <h3>5. How long we keep it, and deleting your account</h3>
         <p>
-          We keep account and booking data for as long as your account is active. If you want
-          your account deleted, contact us and we&apos;ll action it, subject to what we&apos;re
-          legally required to retain (e.g. payment records).
+          We keep account and booking data for as long as your account is active. You can deactivate or
+          permanently delete your account yourself from the <Link href="/account">Account</Link> page.
+          Deleting removes your name, email and password (and an instructor&apos;s profile details) from
+          our records. Booking, payment and review records are kept without your name, because the other
+          person in a booking and our financial records still need them.
         </p>
 
-        <h3>6. Contact</h3>
+        <h3>6. Cookies</h3>
         <p>
-          Questions about this policy, or to request your data be deleted:{" "}
-          <a href="mailto:hello@idistinguishr.example">hello@idistinguishr.example</a>.
+          We only use the cookies needed to keep you signed in and to remember your theme. See our{" "}
+          <Link href="/cookies">Cookie Policy</Link>.
+        </p>
+
+        <h3>7. Contact</h3>
+        <p>
+          Questions about this policy, or a data request: <Link href="/contact">send us a message</Link>.
         </p>
       </div>
     </main>

@@ -1574,3 +1574,40 @@ unnamed at narrow widths: the mobile rule hid its label with `display:none`, whi
 accessibility tree. Fixed by visually hiding the label instead. (The other flag, "no h1", was the in-app
 browser showing the streaming loading placeholder; the h1 is in the page.) Lesson: a scan at desktop width
 does not cover mobile-only rules, so scan narrow as well.
+
+## 34. Footer and the pages behind it (2026-10-16)
+
+The user wanted a proper footer ("about us, service agreements") and shared a screenshot of Tutorful's:
+an oversized, soft-tinted wordmark across the top, a tagline on the left and link columns on the right.
+Research first: footers of MyTutor, Superprof, Lessonface and Tutorful (TakeLessons would not load).
+Common to all: separate student and instructor links, browse-by links (instruments, subjects, cities),
+company links (About, Contact, Help, Blog/Careers), trust and safety (MyTutor leads with a safeguarding
+policy and trust marks), a legal row (Terms, Privacy, Cookies, copyright) and payment reassurance.
+
+**Built:** `Footer.tsx` in that style, themed through footer tokens (cobalt: a solid blue band bookending
+the header; slate: a tinted grey band; midnight: a raised dark band). The wordmark is a decorative SVG
+(`aria-hidden`) whose `textLength` makes it span the full width at any size. Columns: IDistinguishR,
+Students, Instructors, Instruments (static list, so the footer never depends on the database); legal row
+with Terms, Privacy, Cookies, Accessibility and "Payments processed securely by Stripe".
+
+**New pages**, each stating only what is already true of the product: `/about`, `/faq` (Help centre, native
+`<details>`, anchors #booking #cancelling #instructors #payouts #account), `/accessibility` (an honest
+statement, including what has NOT been done: no screen-reader review or user testing yet), `/cookies`
+(only the sign-in cookies and the `theme` cookie; no analytics or advertising; verified by searching the
+code for trackers) and `/contact`. The contact form posts to `/api/contact`, which emails the existing
+`ADMIN_EMAILS` through Resend with Reply-To set to the sender, so no new mailbox is needed. It has a
+honeypot, a per-address limit (5 per hour per pod) and validation; it tells the visitor honestly if the
+email could not be sent (and logs a Resend `{ error }` rather than swallowing it).
+
+**Fixes to existing pages:** Terms and Privacy no longer point at the dead `hello@idistinguishr.example`
+address (they link to the contact form); Privacy now describes self-service account deletion and
+cookies; Terms no longer says instructors are "manually reviewed" (an automated first check exists);
+"teacher's" fixed in Privacy; dates set to October 2026. Still drafts, not reviewed by a solicitor.
+
+**Verification:** `tsc` and a full production build pass; axe-core on `/about /faq /contact /accessibility
+/cookies` in Slate and `/faq`, `/contact`, `/cookies` in Cobalt and Midnight: 0 violations (the only
+"incomplete" contrast item is the decorative wordmark). Screenshots at 1280px and 500px.
+
+**Not built, waiting on the user:** a Safeguarding / safety page and an Instructor agreement. Both need
+decisions (can under-18s learn on the platform? what vetting is promised? legal entity and fee terms)
+and should not be drafted from guesses. A company name/number line in the footer likewise.

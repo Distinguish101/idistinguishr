@@ -96,6 +96,52 @@ export async function sendPasswordResetEmail(params: { to: string; fullName: str
   }
 }
 
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// A message from the public contact form, delivered to the admin addresses.
+// Reply-To is the sender, so replying from the inbox answers them directly.
+// Returns whether it was actually handed to Resend, so the form can tell the
+// visitor honestly instead of pretending it was sent.
+export async function sendContactMessageEmail(params: {
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+}): Promise<boolean> {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+
+  if (!resend || adminEmails.length === 0) {
+    console.warn("RESEND_API_KEY or ADMIN_EMAILS not set — contact form message not delivered");
+    return false;
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: adminEmails,
+      replyTo: params.email,
+      subject: `Contact form (${params.topic}) — ${params.name.slice(0, 60)}`,
+      html: `
+        <p><strong>${escapeHtml(params.name)}</strong> &lt;${escapeHtml(params.email)}&gt; wrote about <em>${escapeHtml(params.topic)}</em>:</p>
+        <p style="white-space:pre-wrap">${escapeHtml(params.message)}</p>
+      `,
+    });
+    if (error) {
+      console.error("Resend rejected contact form message:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Failed to send contact form message:", err);
+    return false;
+  }
+}
+
 // Sent when a teacher finishes Stripe onboarding but automated vetting
 // (src/lib/vet-teacher-profile.ts) didn't approve them outright — the
 // teacher stays PENDING exactly as before that feature existed; this just

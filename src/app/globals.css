@@ -36,6 +36,14 @@
   --on-band: var(--ink);
   --on-band-soft: var(--soft);
 
+  /* footer: a tinted band with a big soft wordmark */
+  --footer-bg: var(--surface-2);
+  --footer-ink: var(--ink);
+  --footer-soft: var(--soft);
+  --footer-mark: color-mix(in srgb, var(--primary) 10%, transparent);
+  --footer-line: color-mix(in srgb, var(--ink) 22%, transparent);
+  --footer-focus: var(--focus);
+
   --radius-s: 8px;
   --radius: 12px;
   --radius-l: 20px;
@@ -78,6 +86,12 @@
   --on-band: #ffffff;
   --on-band-soft: #dce3ff;
   --focus-on-band: #ffe14d;
+  --footer-bg: var(--band);
+  --footer-ink: var(--on-band);
+  --footer-soft: var(--on-band-soft);
+  --footer-mark: rgba(255, 255, 255, 0.14);
+  --footer-line: rgba(255, 255, 255, 0.3);
+  --footer-focus: var(--focus-on-band);
 
   --radius-s: 10px;
   --radius: 12px;
@@ -109,6 +123,12 @@
   --on-hi: #0e1014;
   --header: #0e1014;
   --on-header: #f2f4f8;
+  --footer-bg: var(--surface);
+  --footer-ink: var(--ink);
+  --footer-soft: var(--soft);
+  --footer-mark: color-mix(in srgb, var(--primary) 9%, transparent);
+  --footer-line: var(--line);
+  --footer-focus: var(--focus);
 
   --radius-s: 12px;
   --radius: 14px;
@@ -355,33 +375,91 @@ nav.topbar {
 
 /* ---------- Footer ---------- */
 .site-footer {
-  border-top: 1px solid var(--line);
-  margin-top: 64px;
+  margin-top: 80px;
+  background: var(--footer-bg);
+  color: var(--footer-ink);
+  --focus: var(--footer-focus);
 }
-.site-footer-inner {
+.footer-mark {
+  display: block;
+  width: 100%;
+  max-width: 1120px;
+  height: auto;
+  margin: 0 auto;
+  padding: 56px 24px 0;
+}
+.footer-mark text {
+  fill: var(--footer-mark);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 150px;
+}
+.footer-main {
+  display: grid;
+  grid-template-columns: 1fr 2.2fr;
+  gap: 32px 56px;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+.footer-tagline {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+.footer-cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px 24px;
+}
+.footer-cols h2 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--footer-ink);
+  margin: 0 0 8px;
+}
+.footer-cols ul,
+.footer-legal ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.site-footer a {
+  color: var(--footer-soft);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.site-footer a:hover {
+  color: var(--footer-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer-legal {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 24px;
-  padding-bottom: 24px;
+  gap: 4px 24px;
+  padding-top: 12px;
+  padding-bottom: 20px;
+  border-top: 1px solid var(--footer-line);
+  color: var(--footer-soft);
   font-size: 0.9375rem;
 }
-.site-footer-links {
+.footer-legal p {
+  margin: 0;
+}
+.footer-legal ul {
   display: flex;
-  gap: 8px;
-}
-.site-footer-links a {
-  color: var(--soft);
-  text-decoration: underline;
-  padding: 10px 12px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-}
-.site-footer-links a:hover {
-  color: var(--ink);
+  flex-wrap: wrap;
+  gap: 0 20px;
 }
 
 .legal-content p {
@@ -389,9 +467,37 @@ nav.topbar {
   margin: 0 0 16px;
   max-width: 70ch;
 }
+.legal-content h2,
 .legal-content h3 {
   font-size: 1.1875rem;
   margin: 32px 0 10px;
+}
+.legal-content ul {
+  line-height: 1.7;
+  max-width: 70ch;
+  padding-left: 22px;
+  margin: 0 0 16px;
+}
+
+/* FAQ: native <details> so it works without JavaScript and by keyboard */
+.faq-item {
+  border-top: 1px solid var(--line);
+}
+.faq-item:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+.faq-item summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 16px 0;
+  min-height: 44px;
+  list-style-position: outside;
+}
+.faq-item p {
+  margin: 0 0 16px;
+  max-width: 70ch;
+  color: var(--soft);
+  line-height: 1.65;
 }
 
 /* ---------- Buttons ---------- */
@@ -2004,7 +2110,18 @@ nav.topbar {
   .dash-tabs {
     gap: 18px;
   }
-  .site-footer-inner {
+  .footer-mark {
+    padding: 36px 16px 0;
+  }
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-top: 28px;
+  }
+  .footer-cols {
+    grid-template-columns: 1fr 1fr;
+  }
+  .footer-legal {
     flex-direction: column;
     align-items: flex-start;
   }

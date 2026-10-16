@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Terms — IDistinguishR" };
 
@@ -12,7 +13,7 @@ export default function TermsPage() {
       <h1 className="t-display-l" style={{ marginBottom: 8 }}>
         Terms of Service
       </h1>
-      <p className="t-soft" style={{ marginBottom: 32 }}>Last updated: August 2026</p>
+      <p className="t-soft" style={{ marginBottom: 32 }}>Last updated: October 2026</p>
 
       <div className="legal-content">
         <p>
@@ -44,8 +45,9 @@ export default function TermsPage() {
 
         <h3>4. Instructor approval</h3>
         <p>
-          Instructors are manually reviewed before their profile goes live. Approval isn&apos;t a
-          guarantee of teaching quality — please use reviews and your own judgement.
+          Instructor profiles are reviewed before they go live, using an automated first check and,
+          where it&apos;s needed, a person. Approval isn&apos;t a guarantee of teaching quality — please
+          use reviews and your own judgement.
         </p>
 
         <h3>5. Account conduct</h3>
@@ -63,7 +65,7 @@ export default function TermsPage() {
 
         <h3>7. Contact</h3>
         <p>
-          Questions about these terms: <a href="mailto:hello@idistinguishr.example">hello@idistinguishr.example</a>.
+          Questions about these terms? <Link href="/contact">Send us a message</Link>.
         </p>
       </div>
     </main>
