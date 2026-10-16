@@ -111,7 +111,7 @@ export function Footer() {
       </div>
 
       <div className="wrap footer-legal">
-        <p>© {year} IDistinguishR</p>
+        <p className="footer-copy">© {year} IDistinguishR</p>
         <ul>
           <li>
             <Link href="/terms">Terms of Service</Link>
@@ -129,7 +129,7 @@ export function Footer() {
             <Link href="/accessibility">Accessibility</Link>
           </li>
         </ul>
-        <p>Payments processed securely by Stripe</p>
+        <p className="footer-stripe">Payments processed securely by Stripe</p>
       </div>
     </footer>
   );

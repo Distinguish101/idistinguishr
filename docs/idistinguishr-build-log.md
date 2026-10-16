@@ -1647,3 +1647,10 @@ page down about 100px. All three themes now share one top layout (three-line hea
 single row on the left, photo on the right, same proportions); Midnight keeps its dark palette, lime button
 and hairline borders. Its distinctive tiled style continues below the fold (instrument tiles, steps,
 cards). Removed the extra Midnight hero rules, desktop and phone.
+
+**Footer bottom row made identical across themes (2026-10-16).** The user's screenshots showed the legal row
+laying out differently in Slate (one line) and Midnight ("Payments processed securely by Stripe" wrapped
+to its own line): the row was a wrapping flex row, so it depended on how wide each theme's font happened to
+be. It is now a fixed grid in every theme: legal links on their own row, then the copyright on the left and
+the Stripe note on the right; one column on phones. Verified by measuring element positions at 1545px in
+all three themes (same x positions and row order).

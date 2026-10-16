@@ -454,12 +454,16 @@ nav.topbar {
   line-height: 1.6;
   max-width: 80ch;
 }
+/* Fixed layout in every theme (links on their own row, then copyright left
+   and the Stripe note right), so a wider font can't make it wrap differently. */
 .footer-legal {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "links links"
+    "copy stripe";
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 24px;
+  gap: 0 24px;
   padding-top: 12px;
   padding-bottom: 20px;
   border-top: 1px solid var(--footer-line);
@@ -470,9 +474,16 @@ nav.topbar {
   margin: 0;
 }
 .footer-legal ul {
+  grid-area: links;
   display: flex;
   flex-wrap: wrap;
   gap: 0 20px;
+}
+.footer-copy {
+  grid-area: copy;
+}
+.footer-stripe {
+  grid-area: stripe;
 }
 
 .legal-content p {
@@ -2123,8 +2134,11 @@ nav.topbar {
     grid-template-columns: 1fr 1fr;
   }
   .footer-legal {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "links"
+      "copy"
+      "stripe";
   }
   .auth-card {
     padding: 24px;
