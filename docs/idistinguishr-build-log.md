@@ -1568,3 +1568,9 @@ overlapping midnight hero tiles, a cobalt hero that ignored the mobile layout, a
 overflow. `tsc` and a full `next build` pass. **Not yet checked:** logged-in pages (dashboard, booking
 calendar, profile and availability forms) and real database data; they share the same restyled classes
 but need a look in each theme. Footer "Contact" still points at a placeholder address.
+
+**Follow-up after the live scan (2026-10-16).** axe on the deployed home page flagged the theme dropdown as
+unnamed at narrow widths: the mobile rule hid its label with `display:none`, which also removes it from the
+accessibility tree. Fixed by visually hiding the label instead. (The other flag, "no h1", was the in-app
+browser showing the streaming loading placeholder; the h1 is in the page.) Lesson: a scan at desktop width
+does not cover mobile-only rules, so scan narrow as well.
