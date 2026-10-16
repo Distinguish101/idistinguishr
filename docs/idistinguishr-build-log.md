@@ -1663,3 +1663,11 @@ Restored that single-row layout for every theme and made it fit the widest theme
 width). Also widened the four link columns (the tagline column is narrower) because Midnight's wider font
 made "Become an instructor", "Booking and payment" and "Instructor agreement" wrap while Slate's didn't;
 no footer link wraps in any theme now, and the footer height is identical across themes (703px).
+
+**Pending-approval status moved (2026-10-16, Notion list: "move pending approval button to bottom during
+onboarding").** On the instructor profile form the "Pending approval" badge sat at the very top, above every
+field, where it looked like a button. It now sits at the bottom next to the save button: "Save changes /
+Status: [Pending approval]" (`.form-footer`, `.form-status`). The "Saved." message is now a polite status
+announcement. The form is also rendered on the hidden `/themes` preview (sample data) so it can be checked
+without logging in; axe: 0 violations in Midnight and Slate (Cobalt's only flag was the in-app browser's
+loading placeholder). The logged-in page itself was not viewed live.

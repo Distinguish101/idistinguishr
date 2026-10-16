@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import { HomeView, type FeaturedTeacher } from "@/components/HomeView";
 import { InstrumentIcon, StarIcon } from "@/components/InstrumentIcon";
+import { TeacherProfileForm } from "@/app/teacher/profile/TeacherProfileForm";
 
 export const metadata: Metadata = {
   title: "Themes — IDistinguishR",
@@ -74,6 +75,22 @@ export default function ThemesPage() {
             Log in
           </button>
         </form>
+
+        <h3 style={{ margin: "32px 0 12px" }}>Instructor profile form (status at the bottom)</h3>
+        <div style={{ maxWidth: 640 }}>
+          <TeacherProfileForm
+            initial={{
+              bio: "Classically trained pianist teaching grades 1 to 8, jazz and improvisation.",
+              instruments: ["piano"],
+              hourlyRateMinorUnits: 4500,
+              formatsOffered: ["ONLINE"],
+              locationText: null,
+              credentials: "ABRSM Diploma, 10 years teaching.",
+              photoUrl: null,
+              approvalStatus: "PENDING",
+            }}
+          />
+        </div>
 
         <h3 style={{ margin: "32px 0 12px" }}>Results card and lesson row</h3>
         <div className="rlist" style={{ maxWidth: 760 }}>

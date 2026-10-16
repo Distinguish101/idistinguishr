@@ -88,14 +88,6 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
 
   return (
     <form onSubmit={handleSubmit} className="card">
-      {initial && (
-        <div style={{ marginBottom: 20 }}>
-          <span className={`badge badge-${initial.approvalStatus.toLowerCase()}`}>
-            {APPROVAL_LABEL[initial.approvalStatus]}
-          </span>
-        </div>
-      )}
-
       <div className="field">
         <label htmlFor={`${uid}-1`}>Bio</label>
         <textarea id={`${uid}-1`}
@@ -178,11 +170,27 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
       </div>
 
       {error && <p className="field-error">{error}</p>}
-      {saved && <p style={{ color: "var(--pine)", fontSize: 13 }}>Saved.</p>}
+      {saved && (
+        <p role="status" style={{ color: "var(--success)", fontWeight: 600 }}>
+          Saved.
+        </p>
+      )}
 
-      <button type="submit" className="btn btn-primary" disabled={saving}>
-        {saving ? <Spinner label="Saving…" /> : initial ? "Save changes" : "Create profile"}
-      </button>
+      {/* The approval status lives down here, next to the save button, not above
+          the fields where it looked like a button and pushed the form down. */}
+      <div className="form-footer">
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? <Spinner label="Saving…" /> : initial ? "Save changes" : "Create profile"}
+        </button>
+        {initial && (
+          <p className="form-status">
+            Status:{" "}
+            <span className={`badge badge-${initial.approvalStatus.toLowerCase()}`}>
+              {APPROVAL_LABEL[initial.approvalStatus]}
+            </span>
+          </p>
+        )}
+      </div>
     </form>
   );
 }
