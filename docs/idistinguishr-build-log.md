@@ -1630,3 +1630,12 @@ form gained a "Safety or safeguarding concern" topic; the Help centre gained a S
 Terms, Privacy and the Instructor Agreement were h3 directly under h1 (axe heading-order); now h2.
 Header: an explicit "Home" link first for everyone (students, instructors, admins), and the current page is
 marked with aria-current and a highlight (`NavLink`). All pages scanned with axe-core: 0 violations.
+
+**Booking calendar after the redesign (2026-10-16).** Re-checked the public booking page on the live site in
+all three themes. On a 1920x1080 screen the card reaches about 24px from the bottom as intended (the
+measured `min-height` in `SlotPicker.tsx` still works with the new CSS). On laptop sizes (1280x720,
+1366x768) it ran well below the fold because the day cells were forced square (`aspect-ratio: 1`), which
+made the grid very tall once the card widened. Cells are now a fixed 48px tall (still a comfortable touch
+target), and the booking shell and banner spacing were tightened (32px top padding, 20px banner margin).
+The card still scrolls on screens shorter than its content once a day is picked and times appear; that
+limit remains.

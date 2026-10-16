@@ -1434,7 +1434,7 @@ nav.topbar {
 .cal-shell {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 48px 24px 72px;
+  padding: 32px 24px 72px;
 }
 .flow-context {
   background: var(--primary);
@@ -1444,7 +1444,7 @@ nav.topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   border-radius: var(--radius);
 }
 .flow-context .t {
@@ -1556,7 +1556,10 @@ nav.topbar {
   padding-bottom: 6px;
 }
 .cal-day {
-  aspect-ratio: 1;
+  /* A fixed 48px row, not a square: squares made the grid very tall once the
+     card got wide, pushing the card well below the fold on laptop screens.
+     48px is still a comfortable touch target. */
+  height: 48px;
   border: 2px solid transparent;
   border-radius: var(--radius-s);
   background: none;
