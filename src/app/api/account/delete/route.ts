@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { forgetUserStatus } from "@/lib/user-status";
+import { deletePhotoByUrl } from "@/lib/storage";
 import { upcomingLessonCount, UPCOMING_LESSONS_MESSAGE } from "@/lib/account";
 
 const schema = z.object({
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { teacherProfile: { select: { id: true } } },
+    include: { teacherProfile: { select: { id: true, photoUrl: true } } },
   });
   if (!user || user.status === "DELETED") {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
@@ -74,6 +75,9 @@ export async function POST(req: Request) {
     });
   });
   forgetUserStatus(userId);
+
+  // The account's data is gone, so its uploaded photo goes too (best-effort).
+  await deletePhotoByUrl(user.teacherProfile?.photoUrl);
 
   return NextResponse.json({ ok: true });
 }

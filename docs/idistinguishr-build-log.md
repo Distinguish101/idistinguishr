@@ -1671,3 +1671,42 @@ Status: [Pending approval]" (`.form-footer`, `.form-status`). The "Saved." messa
 announcement. The form is also rendered on the hidden `/themes` preview (sample data) so it can be checked
 without logging in; axe: 0 violations in Midnight and Slate (Cobalt's only flag was the in-app browser's
 loading placeholder). The logged-in page itself was not viewed live.
+
+## 35. Instructor photo upload to file storage (2026-10-16; Notion list: "upload photo and not url")
+
+The user chose file storage for images (the "BOLB" note in Notion meant BLOB, large files). Options compared:
+Cloudflare R2 (10 GB, 1M writes and 10M reads a month free, no download charges; from Cloudflare's own
+pricing page), Oracle Object Storage and Backblaze B2 (both S3-compatible; free tiers quoted from memory,
+not verified), Cloudinary (not needed). Chose **R2**: the domain is already on Cloudflare, so photos can be
+served from `images.idistinguishr.com`. Cassandra/NoSQL and database BLOBs were rejected (wrong tool at
+this size).
+
+**Built, switched off until configured** (the five `STORAGE_*` settings in `docs/photo-storage-setup.md`):
+- `src/lib/storage.ts`: S3-compatible put and delete using `aws4fetch@1.0.20` (65 KB, MIT, no
+  dependencies, pinned exactly); provider-neutral names so R2/Oracle/B2 are interchangeable.
+- `src/lib/image-type.ts`: decides the real type from the first bytes (JPEG/PNG/WebP only; SVG, HTML, GIF,
+  WAV-in-RIFF and empty files rejected), never from the name or the browser's claim.
+- `POST /api/teacher/photo`: instructor-only, 503 if storage isn't configured, 2 MB cap (checks
+  Content-Length first), 10 uploads per hour per instructor, random UUID key under `photos/<userId>/`,
+  long-lived cache header.
+- `PhotoUpload.tsx`: the browser shrinks to at most 1200 px and re-encodes as JPEG (white behind
+  transparency; also strips hidden metadata such as GPS), so uploads are a few hundred KB; shows a
+  preview, Change and Remove; labelled group, described hint, role=alert errors, visible focus ring for the
+  hidden file input.
+- Profile form: shows the uploader when storage is on, otherwise keeps the old paste-a-link box. Profile
+  API: once storage is on, `photoUrl` must be one of the instructor's own uploads (an existing saved link
+  is still allowed unchanged); a replaced or removed photo is deleted from storage; account deletion also
+  deletes the photo (all best-effort, never throws).
+
+**Tested:** `npm run test:storage` (24 checks against a fake S3 server on this machine: signed requests,
+right path, content type, cache header, exact bytes, key parsing, signed delete, no request for foreign
+URLs, type sniffing, disabled-when-unconfigured). In a real browser on `/themes`: a 3000x2000 transparent
+PNG was sent as a 1200x800 JPEG of 7.6 KB; preview, Change and Remove updated; text/SVG files and a
+corrupt PNG gave clear errors; Remove restored the initials. axe: 0 violations in Slate and Cobalt;
+Midnight's only flag was a mid-transition snapshot from live theme switching (fresh load verified
+correct colours). `tsc` and a full build pass.
+
+**Not tested:** the real upload to R2 and the authenticated route end to end (no credentials and no login
+available to the assistant); that is the first thing to check after setup. Known gaps: an upload that is
+never saved leaves an unused file (harmless; a periodic clean-up is a possible job); photos still have no
+alt-text field (see the Accessibility statement).

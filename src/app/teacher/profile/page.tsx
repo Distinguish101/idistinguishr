@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeacherProfileForm } from "./TeacherProfileForm";
 import { StripeConnectLink } from "./StripeConnectLink";
+import { storageEnabled } from "@/lib/storage";
 
 export default async function TeacherProfilePage() {
   const session = await auth();
@@ -28,7 +29,16 @@ export default async function TeacherProfilePage() {
           ? "Students see this once it's approved."
           : "Create your profile to get started — an admin reviews it before you go live."}
       </p>
-      <TeacherProfileForm initial={profile} />
+      <TeacherProfileForm
+        initial={profile}
+        uploadsEnabled={storageEnabled()}
+        initials={(session.user.name ?? "")
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((p) => p[0]?.toUpperCase())
+          .join("")}
+      />
 
       {profile && (
         <div className="card" style={{ marginTop: 24 }}>

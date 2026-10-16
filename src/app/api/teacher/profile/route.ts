@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeInstruments } from "@/lib/instruments";
+import { deletePhotoByUrl, storageConfig, userPhotoPrefix } from "@/lib/storage";
 
 // Teacher profile CRUD (US-25). Create/update share one endpoint since
 // TeacherProfile is 1:1 with a teacher User — an upsert on userId covers
@@ -56,6 +57,17 @@ export async function PUT(req: Request) {
   const { bio, instruments, hourlyRate, formatsOffered, locationText, credentials, photoUrl } = parsed.data;
   const hourlyRateMinorUnits = Math.round(hourlyRate * 100);
 
+  // Once photo uploads are on, a photo must be one this instructor uploaded
+  // (or the link they already have), not an arbitrary web address.
+  const existing = await prisma.teacherProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { photoUrl: true },
+  });
+  const cfg = storageConfig();
+  if (cfg && photoUrl && photoUrl !== existing?.photoUrl && !photoUrl.startsWith(userPhotoPrefix(cfg, session.user.id))) {
+    return NextResponse.json({ error: "Please add your photo with the Upload button." }, { status: 400 });
+  }
+
   const profile = await prisma.teacherProfile.upsert({
     where: { userId: session.user.id },
     create: {
@@ -78,6 +90,11 @@ export async function PUT(req: Request) {
       photoUrl,
     },
   });
+
+  // A replaced or removed photo of ours is deleted from storage (best-effort).
+  if (existing?.photoUrl && existing.photoUrl !== (photoUrl ?? null)) {
+    await deletePhotoByUrl(existing.photoUrl);
+  }
 
   return NextResponse.json({ profile });
 }

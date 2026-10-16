@@ -79,6 +79,8 @@ export default function ThemesPage() {
         <h3 style={{ margin: "32px 0 12px" }}>Instructor profile form (status at the bottom)</h3>
         <div style={{ maxWidth: 640 }}>
           <TeacherProfileForm
+            uploadsEnabled
+            initials="MO"
             initial={{
               bio: "Classically trained pianist teaching grades 1 to 8, jazz and improvisation.",
               instruments: ["piano"],

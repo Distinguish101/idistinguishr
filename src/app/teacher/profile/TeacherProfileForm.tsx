@@ -4,6 +4,7 @@ import { useState, type FormEvent, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
 import { displayInstruments } from "@/lib/instruments";
+import { PhotoUpload } from "./PhotoUpload";
 
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -24,7 +25,15 @@ const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
   REJECTED: "Rejected",
 };
 
-export function TeacherProfileForm({ initial }: { initial: Profile }) {
+export function TeacherProfileForm({
+  initial,
+  uploadsEnabled = false,
+  initials = "",
+}: {
+  initial: Profile;
+  uploadsEnabled?: boolean;
+  initials?: string;
+}) {
   const uid = useId();
   const router = useRouter();
   const [bio, setBio] = useState(initial?.bio ?? "");
@@ -147,15 +156,27 @@ export function TeacherProfileForm({ initial }: { initial: Profile }) {
         </div>
       )}
 
-      <div className="field">
-        <label htmlFor={`${uid}-5`}>Photo URL</label>
-        <input id={`${uid}-5`}
-          type="url"
+      {uploadsEnabled ? (
+        <PhotoUpload
           value={photoUrl}
-          onChange={(e) => setPhotoUrl(e.target.value)}
-          placeholder="https://... (a link to a photo of you)"
+          onChange={(url) => {
+            setPhotoUrl(url);
+            setSaved(false);
+          }}
+          fallbackLabel={initials}
         />
-      </div>
+      ) : (
+        // Fallback while file storage isn't connected: paste a link.
+        <div className="field">
+          <label htmlFor={`${uid}-5`}>Photo URL</label>
+          <input id={`${uid}-5`}
+            type="url"
+            value={photoUrl}
+            onChange={(e) => setPhotoUrl(e.target.value)}
+            placeholder="https://... (a link to a photo of you)"
+          />
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor={`${uid}-6`}>Credentials</label>
