@@ -1654,3 +1654,12 @@ to its own line): the row was a wrapping flex row, so it depended on how wide ea
 be. It is now a fixed grid in every theme: legal links on their own row, then the copyright on the left and
 the Stripe note on the right; one column on phones. Verified by measuring element positions at 1545px in
 all three themes (same x positions and row order).
+
+**Footer corrected again (2026-10-16).** The first attempt to unify the footer's bottom row forced it onto
+two rows, which is not what the user wanted: they pointed at the Slate version as the target (copyright on
+the left, legal links in the middle, "Payments processed securely by Stripe" on the right, all one line).
+Restored that single-row layout for every theme and made it fit the widest theme font with room to spare
+(14px text, tighter gaps, items never break mid-phrase; measured about 70px of slack in Midnight at desktop
+width). Also widened the four link columns (the tagline column is narrower) because Midnight's wider font
+made "Become an instructor", "Booking and payment" and "Instructor agreement" wrap while Slate's didn't;
+no footer link wraps in any theme now, and the footer height is identical across themes (703px).

@@ -399,8 +399,8 @@ nav.topbar {
 }
 .footer-main {
   display: grid;
-  grid-template-columns: 1fr 2.2fr;
-  gap: 32px 56px;
+  grid-template-columns: minmax(0, 0.6fr) minmax(0, 2.4fr);
+  gap: 32px 40px;
   padding-top: 40px;
   padding-bottom: 40px;
 }
@@ -415,8 +415,8 @@ nav.topbar {
 }
 .footer-cols {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 28px 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px 16px;
 }
 .footer-cols h2 {
   font-family: var(--font-body);
@@ -454,36 +454,32 @@ nav.topbar {
   line-height: 1.6;
   max-width: 80ch;
 }
-/* Fixed layout in every theme (links on their own row, then copyright left
-   and the Stripe note right), so a wider font can't make it wrap differently. */
+/* One row in every theme: copyright left, links in the middle, Stripe note
+   right. Kept compact (15px, tight gaps) so even the widest theme font fits on a
+   single line at normal desktop widths; items wrap whole, in the same order. */
 .footer-legal {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "links links"
-    "copy stripe";
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0 24px;
+  flex-wrap: wrap;
+  gap: 4px 20px;
   padding-top: 12px;
   padding-bottom: 20px;
   border-top: 1px solid var(--footer-line);
   color: var(--footer-soft);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 .footer-legal p {
   margin: 0;
 }
 .footer-legal ul {
-  grid-area: links;
   display: flex;
   flex-wrap: wrap;
-  gap: 0 20px;
+  gap: 0 14px;
 }
-.footer-copy {
-  grid-area: copy;
-}
-.footer-stripe {
-  grid-area: stripe;
+.footer-legal li,
+.footer-legal p {
+  white-space: nowrap;
 }
 
 .legal-content p {
@@ -2134,11 +2130,11 @@ nav.topbar {
     grid-template-columns: 1fr 1fr;
   }
   .footer-legal {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "links"
-      "copy"
-      "stripe";
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footer-legal p {
+    white-space: normal;
   }
   .auth-card {
     padding: 24px;
