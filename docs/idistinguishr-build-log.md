@@ -1639,3 +1639,11 @@ made the grid very tall once the card widened. Cells are now a fixed 48px tall (
 target), and the booking shell and banner spacing were tightened (32px top padding, 20px banner margin).
 The card still scrolls on screens shorter than its content once a day is picked and times appear; that
 limit remains.
+
+**Midnight home hero made consistent (2026-10-16).** The user noticed the top of the home page in Midnight
+differed from Cobalt and Slate. It did: Midnight put the headline inside a large tile (so it wrapped to four
+lines), stacked the search with a full-width button, and used a much taller photo, pushing the rest of the
+page down about 100px. All three themes now share one top layout (three-line headline and the search in a
+single row on the left, photo on the right, same proportions); Midnight keeps its dark palette, lime button
+and hairline borders. Its distinctive tiled style continues below the fold (instrument tiles, steps,
+cards). Removed the extra Midnight hero rules, desktop and phone.

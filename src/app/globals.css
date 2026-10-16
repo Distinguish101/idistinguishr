@@ -1904,36 +1904,14 @@ nav.topbar {
 }
 
 /* ----- midnight: dark, tiled ("bento"): every job in its own tile ----- */
-[data-theme="midnight"] .hero {
-  padding: 28px 0 8px;
-}
-[data-theme="midnight"] .hero-copy,
-[data-theme="midnight"] .search-card,
-[data-theme="midnight"] .hero-art {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-}
-[data-theme="midnight"] .hero-copy {
-  padding: 32px 32px 8px;
-  border-bottom: none;
-  border-radius: 24px 24px 0 0;
-}
+/* Same top layout as the other themes (headline and search on the left, photo on
+   the right); midnight just paints it dark. */
 [data-theme="midnight"] .search-card {
-  border-top: none;
-  border-radius: 0 0 24px 24px;
-  padding: 8px 32px 32px;
-  grid-template-columns: 1fr 1fr;
-  align-items: end;
-}
-[data-theme="midnight"] .search-card .btn {
-  grid-column: 1 / -1;
-}
-[data-theme="midnight"] .hero-grid {
-  gap: 0 12px;
+  border: 1px solid var(--line);
+  box-shadow: none;
 }
 [data-theme="midnight"] .hero-art {
-  min-height: 320px;
+  border: 1px solid var(--line);
 }
 [data-theme="midnight"] .chip-picker {
   grid-template-columns: repeat(4, 1fr);
@@ -2051,17 +2029,6 @@ nav.topbar {
   }
   [data-theme="cobalt"] .search-card {
     margin-bottom: -130px;
-  }
-  [data-theme="midnight"] .hero-copy {
-    padding: 24px 20px 8px;
-  }
-  [data-theme="midnight"] .search-card {
-    padding: 8px 20px 24px;
-    grid-template-columns: 1fr;
-  }
-  [data-theme="midnight"] .hero-art {
-    margin-top: 12px;
-    min-height: 0;
   }
   [data-theme="midnight"] .chip-picker {
     grid-template-columns: repeat(2, 1fr);
