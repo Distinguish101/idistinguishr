@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isAdminEmail } from "@/lib/admin";
 import type { ThemeId } from "@/lib/theme";
+import { NavLink } from "./NavLink";
 import { SignOutButton } from "./SignOutButton";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
@@ -28,25 +29,28 @@ export async function NavBar({ theme }: { theme: ThemeId }) {
       <div className="wrap topbar-inner">
         <Wordmark />
         <div className="topbar-links">
+          <NavLink href="/" exact>
+            Home
+          </NavLink>
           {session?.user ? (
             <>
               {session.user.role === "TEACHER" ? (
                 <>
-                  <Link href="/teacher/dashboard">Dashboard</Link>
-                  <Link href="/teacher/profile">Profile</Link>
-                  <Link href="/teacher/availability">Availability</Link>
+                  <NavLink href="/teacher/dashboard">Dashboard</NavLink>
+                  <NavLink href="/teacher/profile">Profile</NavLink>
+                  <NavLink href="/teacher/availability">Availability</NavLink>
                 </>
               ) : (
-                <Link href="/dashboard">Dashboard</Link>
+                <NavLink href="/dashboard">Dashboard</NavLink>
               )}
-              {isAdminEmail(session.user.email) && <Link href="/admin">Admin</Link>}
-              <Link href="/account">Account</Link>
+              {isAdminEmail(session.user.email) && <NavLink href="/admin">Admin</NavLink>}
+              <NavLink href="/account">Account</NavLink>
               <SignOutButton />
             </>
           ) : (
-            <Link href="/auth" className="nav-cta">
+            <NavLink href="/auth" className="nav-cta">
               Log in
-            </Link>
+            </NavLink>
           )}
           <ThemeSwitcher current={theme} />
         </div>

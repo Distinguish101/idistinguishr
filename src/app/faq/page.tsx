@@ -87,6 +87,22 @@ const SECTIONS: { id: string; title: string; items: QA[] }[] = [
     ],
   },
   {
+    id: "safety",
+    title: "Safety",
+    items: [
+      {
+        q: "How do I report a concern?",
+        a: (
+          <>
+            <Link href="/contact">Contact us</Link> and choose &ldquo;Safety or safeguarding concern&rdquo;. Our{" "}
+            <Link href="/safeguarding">safety and safeguarding</Link> page explains what we do. If someone is in
+            immediate danger, call 999.
+          </>
+        ),
+      },
+    ],
+  },
+  {
     id: "account",
     title: "Your account",
     items: [

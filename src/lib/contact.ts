@@ -5,6 +5,7 @@ export const CONTACT_TOPICS = [
   "Teaching on IDistinguishR",
   "Account or privacy",
   "Accessibility",
+  "Safety or safeguarding concern",
   "Something else",
 ] as const;
 

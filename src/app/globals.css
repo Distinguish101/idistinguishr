@@ -325,6 +325,9 @@ nav.topbar {
 .topbar-links .linklike:hover {
   background: color-mix(in srgb, var(--on-header) 12%, transparent);
 }
+.topbar-links a[aria-current="page"]:not(.nav-cta) {
+  background: color-mix(in srgb, var(--on-header) 14%, transparent);
+}
 .topbar-links a.nav-cta {
   background: var(--primary);
   color: var(--on-primary);
@@ -441,6 +444,16 @@ nav.topbar {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.footer-company-row {
+  padding-bottom: 12px;
+}
+.footer-company {
+  margin: 0;
+  color: var(--footer-soft);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 80ch;
+}
 .footer-legal {
   display: flex;
   justify-content: space-between;
@@ -477,6 +490,24 @@ nav.topbar {
   max-width: 70ch;
   padding-left: 22px;
   margin: 0 0 16px;
+}
+
+/* Placeholders for details still to be filled in (see src/lib/site-info.ts):
+   deliberately loud so they can't be mistaken for finished text. */
+.todo {
+  background: var(--hi);
+  color: var(--on-hi);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.draft-notice {
+  border: 2px solid var(--field);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin: 0 0 28px;
+  max-width: 70ch;
+  background: var(--surface);
 }
 
 /* FAQ: native <details> so it works without JavaScript and by keyboard */

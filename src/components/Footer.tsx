@@ -1,4 +1,23 @@
 import Link from "next/link";
+import { SITE_INFO } from "@/lib/site-info";
+import { Info } from "@/components/Todo";
+
+// "IDistinguishR is a trading name of ..." with highlighted placeholders until
+// the details are filled in (src/lib/site-info.ts).
+function CompanyLine() {
+  const soleTrader = SITE_INFO.entityType === "sole trader";
+  return (
+    <p className="footer-company">
+      IDistinguishR is a trading name of <Info field="legalName" label="registered company name" />.{" "}
+      {!soleTrader && (
+        <>
+          Company number <Info field="companyNumber" label="company number" />.{" "}
+        </>
+      )}
+      Address: <Info field="registeredAddress" label="registered address" />.
+    </p>
+  );
+}
 
 // Browse links are static on purpose: the footer is on every page, and a
 // database query here would make every page depend on it.
@@ -35,6 +54,9 @@ export function Footer() {
               <li>
                 <Link href="/faq">Help centre</Link>
               </li>
+              <li>
+                <Link href="/safeguarding">Safety and safeguarding</Link>
+              </li>
             </ul>
           </div>
           <div>
@@ -66,6 +88,9 @@ export function Footer() {
               <li>
                 <Link href="/faq#instructors">Instructor questions</Link>
               </li>
+              <li>
+                <Link href="/instructor-agreement">Instructor agreement</Link>
+              </li>
             </ul>
           </div>
           <div>
@@ -81,11 +106,18 @@ export function Footer() {
         </nav>
       </div>
 
+      <div className="wrap footer-company-row">
+        <CompanyLine />
+      </div>
+
       <div className="wrap footer-legal">
         <p>© {year} IDistinguishR</p>
         <ul>
           <li>
             <Link href="/terms">Terms of Service</Link>
+          </li>
+          <li>
+            <Link href="/instructor-agreement">Instructor Agreement</Link>
           </li>
           <li>
             <Link href="/privacy">Privacy Policy</Link>

@@ -1611,3 +1611,22 @@ cookies; Terms no longer says instructors are "manually reviewed" (an automated 
 **Not built, waiting on the user:** a Safeguarding / safety page and an Instructor agreement. Both need
 decisions (can under-18s learn on the platform? what vetting is promised? legal entity and fee terms)
 and should not be drafted from guesses. A company name/number line in the footer likewise.
+
+**Follow-up (2026-10-16): placeholder pages for the pending items, and a Home link.**
+The user asked for the items waiting on their decisions to be added to the footer with placeholder
+content to fill in later. Built: `/safeguarding` (Safety and safeguarding) and `/instructor-agreement`, both
+drafts. They state only what is already true (profile review before going live, reviews only after a
+lesson, Stripe payments, the 10% fee, 48-hour free cancellation, no off-platform arrangements, self-service
+deactivate/delete) and leave the undecided parts as loud highlighted brackets: whether under-18s can learn,
+what instructor checks are required (no DBS claim is made), instructor cancellation rules, liability and
+insurance, who handles safeguarding concerns. Emergency information (999, NSPCC 0808 800 5000) is included.
+A bullet claiming a student's name is shared only with the booked instructor was removed because reviews can
+show names. All business details live in one file, `src/lib/site-info.ts` (legal name, entity type, company
+number, address, governing law, safeguarding lead, solicitor-review date): while a field is null the footer
+company line and the legal pages show a highlighted "[to be added]" placeholder; setting a field replaces
+every use, and setting `legalReviewedOn` removes the "Draft" notices. The footer gained "Safety and
+safeguarding", "Instructor agreement" (Instructors column and legal row) and the company line; the contact
+form gained a "Safety or safeguarding concern" topic; the Help centre gained a Safety section. Headings on
+Terms, Privacy and the Instructor Agreement were h3 directly under h1 (axe heading-order); now h2.
+Header: an explicit "Home" link first for everyone (students, instructors, admins), and the current page is
+marked with aria-current and a highlight (`NavLink`). All pages scanned with axe-core: 0 violations.
