@@ -48,6 +48,9 @@ function client(cfg: StorageConfig) {
     secretAccessKey: cfg.secretAccessKey,
     service: "s3",
     region: cfg.region,
+    // aws4fetch's default is 10 retries with doubling waits (about 50 seconds)
+    // on a 5xx, which would hang a profile save while storage is down.
+    retries: 2,
   });
 }
 

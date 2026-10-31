@@ -20,3 +20,7 @@ k8s
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# tests aren't part of the production image
+tests
+vitest.config.mts

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -36,34 +37,44 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You've already reviewed this lesson." }, { status: 409 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.review.create({
-      data: {
-        bookingId: booking.id,
-        studentId: booking.studentId,
-        teacherId: booking.teacherId,
-        rating,
-        comment: comment || null,
-      },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.review.create({
+        data: {
+          bookingId: booking.id,
+          studentId: booking.studentId,
+          teacherId: booking.teacherId,
+          rating,
+          comment: comment || null,
+        },
+      });
 
-    // Denormalized avgRating/reviewCount on TeacherProfile, recalculated
-    // on every new review per the data model doc — cheap at MVP review
-    // volumes, no need for an incremental running-average trick.
-    const agg = await tx.review.aggregate({
-      where: { teacherId: booking.teacherId },
-      _avg: { rating: true },
-      _count: true,
-    });
+      // Denormalized avgRating/reviewCount on TeacherProfile, recalculated
+      // on every new review per the data model doc — cheap at MVP review
+      // volumes, no need for an incremental running-average trick.
+      const agg = await tx.review.aggregate({
+        where: { teacherId: booking.teacherId },
+        _avg: { rating: true },
+        _count: true,
+      });
 
-    await tx.teacherProfile.update({
-      where: { id: booking.teacherId },
-      data: {
-        avgRating: agg._avg.rating ?? 0,
-        reviewCount: agg._count,
-      },
+      await tx.teacherProfile.update({
+        where: { id: booking.teacherId },
+        data: {
+          avgRating: agg._avg.rating ?? 0,
+          reviewCount: agg._count,
+        },
+      });
     });
-  });
+  } catch (err) {
+    // Two submissions racing past the check above: the unique index on
+    // bookingId lets one through; the other gets the same answer as a
+    // plain duplicate instead of a server error.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return NextResponse.json({ error: "You've already reviewed this lesson." }, { status: 409 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

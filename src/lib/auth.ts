@@ -34,8 +34,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+        // Signup stores emails lower-cased, but the sign-in form sends what was
+        // typed (phone keyboards capitalise the first letter), so match without
+        // regard to case or surrounding spaces.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: (credentials.email as string).trim(), mode: "insensitive" } },
         });
         if (!user || !user.passwordHash) return null;
 
