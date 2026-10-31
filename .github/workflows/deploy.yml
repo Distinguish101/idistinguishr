@@ -22,7 +22,28 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Unit and integration tests (npm test). The integration tests use an
+  # in-process Postgres, so no database or secrets are needed. A failure here
+  # stops the build and deploy below.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The tests import the Prisma client, which is generated, not committed.
+      - run: npx prisma generate
+
+      - run: npm test
+
   build-and-push:
+    needs: test
     # Native arm64 runner (free for public repos): the cluster is arm64, so
     # building here avoids emulating ARM under QEMU, which made builds take
     # 10-20 minutes and occasionally stall.

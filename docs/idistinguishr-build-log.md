@@ -1760,5 +1760,6 @@ and `npm run test:storage` are gone: their checks live in `tests/unit/storage.te
   repeated character always fails the letter or number rule first.
 
 **Not covered:** payments (by request); pages and React components (this is backend only); Google sign-in (not
-wired up yet); the real Resend, R2 and Anthropic services. The tests are not yet run automatically on push; adding
-a `npm test` job to `.github/workflows/deploy.yml` is a sensible next step.
+wired up yet); the real Resend, R2 and Anthropic services. The tests were not wired into the pipeline in the first commit; a `test` job
+(Node 22, `npm ci`, `prisma generate`, `npm test`) now runs first in `.github/workflows/deploy.yml`, and the
+build and deploy jobs wait for it, so a failing test blocks a release.
