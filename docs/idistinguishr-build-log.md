@@ -1763,3 +1763,50 @@ and `npm run test:storage` are gone: their checks live in `tests/unit/storage.te
 wired up yet); the real Resend, R2 and Anthropic services. The tests were not wired into the pipeline in the first commit; a `test` job
 (Node 22, `npm ci`, `prisma generate`, `npm test`) now runs first in `.github/workflows/deploy.yml`, and the
 build and deploy jobs wait for it, so a failing test blocks a release.
+
+
+## 37. Site outage from the database's free-tier limit, VM disk clean-up, readiness probe fix (2026-10-31 to 2026-11-01)
+
+**What happened.** The live site returned 503. The website pods were not Ready because the readiness probe
+(`/api/health?ready=1`) runs `SELECT 1` against the database, and the Neon project was over its free usage limit
+(the user confirmed Neon said "usage limit"). Last night's migration pods also failed with `P1001: Can't reach
+database server` at the Neon address, which confirmed the database side, not the app. The Oracle VM itself was healthy.
+On 2026-11-01 the database answered again (the monthly allowance had probably reset; not confirmed in Neon's console).
+
+**Likely cause (not proven; Neon's usage graph would confirm).** Neon's free plan allows 100 compute-unit hours per
+project per month, billed only while the database is awake; it normally sleeps after about 5 idle minutes. The
+readiness probe ran every 10 seconds on each of 2 pods (a query roughly every 5 seconds, 24 hours a day), so the
+database could never sleep. Awake all month at the smallest size (0.25 CU) is about 180 CU-hours, nearly double the
+allowance, before any real visitors. The liveness probe never touched the database, so only readiness mattered.
+
+**Fix.** The readiness probe now calls `/api/health` (process is up, no database query), the same as liveness.
+`/api/health?ready=1` still works as a deep check for people and external monitors; a comment in
+`src/app/api/health/route.ts` says not to use it as a probe. Changed in `k8s/deployment.yaml` (with a comment
+explaining why) and applied to the live Deployment with a one-field `kubectl patch`, which did a normal rolling
+restart (new pods Ready one at a time; the home page and `/api/health?ready=1` both answered 200 afterwards). The next deploy applies
+the same manifest, so repo and cluster agree. **Trade-off:** a database outage no longer takes the pods out of service;
+visitors see errors on pages that need the database instead of a blanket 503, and static pages keep working.
+
+**VM disk clean-up.** Checked read-only first: one node (`idistinguishr-k8s`, k3s, ARM, 2 OCPU, 12 GB RAM, CPU
+about 5%, memory about 30% used), root disk 30 GB at 83% full (5.1 GB free). The space was about 14 GB of container
+images: one old website image kept per deploy (about 15 versions) plus leftover layers, nothing ever pruned.
+Ran `k3s crictl rmi --prune` (removes only images no container uses) and `dnf clean all`: disk went to 42% used
+(18 GB free), image entries 118 to 36, containerd 14 GB to 2.9 GB. Running pods were not affected. Some removals
+timed out ("deadline exceeded") but finished in the background. This will build up again with each deploy; a
+prune step in the deploy workflow is a sensible follow-up (not done).
+
+**Options discussed for the database (no decision yet; all free ones listed first):**
+1. Stay on Neon free with the probe fixed (done above); wait and watch usage.
+2. Run Postgres on the Oracle VM: a StatefulSet on k3s `local-path` storage (ideally on a separate Oracle block
+   volume), internal-only address, nightly `pg_dump` to a private R2 bucket with about 30 days retention, and a
+   tested restore guide. The VM has the memory and CPU for it; the root disk now has room. Needs a Neon export first.
+   Risks: one machine, up to a day of data lost between backups, the user maintains it.
+3. Another managed free Postgres (Aiven, Prisma Postgres): needs a migration; limits quoted by sources disagree.
+   Avoid Supabase free (pauses after a week idle) and Render free databases (expire after 30 days).
+Paid fallback: upgrade Neon. Moving the app itself (Hetzner, Fly.io, Railway, Render, Vercel) was judged
+unnecessary: it is free, running and not what failed.
+
+**Still open.** Check Neon's console (monitoring graph and reset date) to confirm the cause; delete the three failed
+`idistinguishr-migrate-*` pods (harmless leftovers); add image pruning to the deploy workflow; decide whether to
+self-host Postgres. Uncommitted at the time of writing: the test suite and its three fixes (section 36) and this probe
+change, so none of it is deployed yet.

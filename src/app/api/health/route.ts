@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 // GET /api/health          -> liveness: process is up, no dependency checks
 //                              (a DB blip must not cause k8s to restart the pod)
-// GET /api/health?ready=1  -> readiness: also confirms Postgres is reachable
+// GET /api/health?ready=1  -> deep check: also confirms Postgres is reachable.
+//                              For people and external monitors. Do NOT use it
+//                              as a Kubernetes probe: it wakes a serverless
+//                              database (e.g. Neon) on every call and keeps it
+//                              awake, burning the free compute allowance.
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 

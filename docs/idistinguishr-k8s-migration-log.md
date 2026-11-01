@@ -849,3 +849,9 @@ be a variable while debugging the migration itself.
   **Also closed a gap:** `SUSPENDED` was never enforced anywhere. Login now rejects SUSPENDED/DELETED, and
   the Auth.js `jwt` callback checks the account is still ACTIVE (via `src/lib/user-status.ts`, cached per
   pod for 60s) and ends the session otherwise, so sessions on other devices stop working too.
+
+- **Readiness probe no longer queries the database (2026-11-01).** The site went down (503) when the Neon free
+  plan's compute allowance ran out; the probe (`/api/health?ready=1`, 2 pods x every 10s) very likely kept the
+  database awake around the clock. The readiness probe now uses `/api/health` (no database query), patched live and
+  changed in `k8s/deployment.yaml` (not yet committed; the next deploy applies it). Also cleared 14 GB of old container images from the
+  VM (disk 83% to 42%). Full write-up and database options: build log section 37.

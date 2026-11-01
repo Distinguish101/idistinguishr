@@ -88,9 +88,15 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+          # Deliberately NOT /api/health?ready=1: that variant queries the
+          # database, and 2 pods x every 10s kept Neon's free-tier compute
+          # awake around the clock (it normally sleeps after ~5 idle minutes),
+          # which used up the monthly compute allowance and took the site
+          # down. Readiness here only proves the process is serving; check the
+          # database by hand with /api/health?ready=1 when needed.
           readinessProbe:
             httpGet:
-              path: /api/health?ready=1
+              path: /api/health
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
