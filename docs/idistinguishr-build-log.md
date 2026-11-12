@@ -1848,8 +1848,13 @@ CDN or proxy; the domain resolves straight to the VM); the autoscaler is applied
 only has kubectl). Rate limiting for sign-in and signup at Traefik: needs a check that the client's real address
 reaches Traefik first, or everyone shares one bucket. Caching the home page's public reads: a behaviour change that
 deserves its own change. Lowering the autoscaler maximum: the reasoning (CPU limits versus 2 CPUs, database
-connections) is unverified. Pinning GitHub Actions to commit hashes. A Content-Security-Policy. The Node 20 to 22
-change in the Dockerfile is a separate commit (Docker was not running here, so the image could not be test-built).
+connections) is unverified. Pinning GitHub Actions to commit hashes. A Content-Security-Policy.
+
+**Node 20 to 22 (second commit, same day).** The Dockerfile ran Node 20 (end of life since April 2026) while CI tests on
+Node 22. All three stages now use `node:22-alpine`. Docker was not running on this laptop, so the image could not be
+test-built locally; it was shipped as its own commit so it can be reverted alone, and the pipeline's build, migration,
+rolling update (new pods must be Ready before old ones go) and smoke test are the check. The first commit (`5f7c191`)
+deployed cleanly beforehand: new headers served, home page 200, custom 404 page, both pods Running.
 
 **Gaps still open, in priority order.**
 1. No independent database backup and no tested restore; check Neon's restore window in its console.
