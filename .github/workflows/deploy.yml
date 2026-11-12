@@ -14,8 +14,16 @@ name: Build, push, and deploy
 # GHCR push uses the repo's built-in GITHUB_TOKEN — no separate registry
 # account or credentials needed.
 
+# Pushes to main run everything and deploy. Pull requests into main run only
+# the tests (the build and deploy jobs below are skipped for them). Pushes that
+# change nothing but docs or Markdown files don't deploy.
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+  pull_request:
     branches: [main]
 
 env:
@@ -44,6 +52,7 @@ jobs:
 
   build-and-push:
     needs: test
+    if: github.event_name == 'push'
     # Native arm64 runner (free for public repos): the cluster is arm64, so
     # building here avoids emulating ARM under QEMU, which made builds take
     # 10-20 minutes and occasionally stall.
@@ -107,6 +116,7 @@ jobs:
 
   deploy:
     needs: build-and-push
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
     # Deploys run one at a time and are never cancelled mid-rollout, so two
@@ -140,3 +150,24 @@ jobs:
           sed "s|image: ${{ needs.build-and-push.outputs.image }}:.*|image: ${{ needs.build-and-push.outputs.image }}:${{ needs.build-and-push.outputs.tag }}|" \
             k8s/deployment.yaml | kubectl apply -f -
           kubectl rollout status deployment/idistinguishr -n idistinguishr --timeout=180s
+
+      # Asks the live site whether it is answering. /api/health proves the app
+      # is up; the home page also reads from the database, so it proves the
+      # database connection works too. A failure fails this job, so GitHub
+      # emails about it. It does not roll anything back: with maxUnavailable 0
+      # the old pods keep serving until the new ones are ready.
+      - name: Smoke test the live site
+        run: |
+          for url in https://idistinguishr.com/api/health https://idistinguishr.com/; do
+            ok=0
+            for attempt in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$url" || true)
+              echo "$url attempt $attempt: HTTP $code"
+              if [ "$code" = "200" ]; then ok=1; break; fi
+              sleep 10
+            done
+            if [ "$ok" != "1" ]; then
+              echo "::error::$url did not return 200 after the deploy"
+              exit 1
+            fi
+          done

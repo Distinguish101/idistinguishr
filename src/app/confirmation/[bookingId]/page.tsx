@@ -11,6 +11,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { AutoRefresh } from "./AutoRefresh";
 
 export default async function ConfirmationPage({
   params,
@@ -40,6 +41,7 @@ export default async function ConfirmationPage({
   if (booking.status === "PENDING_PAYMENT") {
     return (
       <main className="confirm-shell">
+        <AutoRefresh />
         <h1 className="t-display-l">Finalizing your payment…</h1>
         <p className="t-soft" style={{ marginTop: 12 }}>
           This usually only takes a few seconds. Refresh this page if it doesn&apos;t update.
@@ -52,6 +54,10 @@ export default async function ConfirmationPage({
     return (
       <main className="confirm-shell">
         <h1 className="t-display-l">This booking was cancelled</h1>
+        <p className="t-soft" style={{ marginTop: 12 }}>
+          If you were charged for this booking, please <Link href="/contact">get in touch</Link> and quote
+          reference {booking.id}.
+        </p>
         <Link href="/results" className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
           Browse instructors
         </Link>

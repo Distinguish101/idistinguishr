@@ -84,12 +84,20 @@ describe("sendBookingConfirmationEmail", () => {
     await expect(email.sendBookingConfirmationEmail(booking)).resolves.toBeUndefined();
   });
 
-  // Known gap: names are put into the HTML unescaped (the password-reset and
-  // contact emails do escape). Recorded so fixing it flips this to passing.
-  it.fails("escapes HTML in the student and teacher names", async () => {
+  it("escapes HTML in the student name, teacher name and location", async () => {
     const email = await loadEmail({ RESEND_API_KEY: "key" });
-    await email.sendBookingConfirmationEmail({ ...booking, studentName: "<script>x</script>" });
-    expect(send.mock.calls[0][0].html).not.toContain("<script>");
+    await email.sendBookingConfirmationEmail({
+      ...booking,
+      studentName: "<script>x</script>",
+      teacherName: "<b>T</b>",
+      format: "IN_PERSON",
+      locationText: "<img src=x>",
+    });
+    const html = send.mock.calls[0][0].html;
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<b>T</b>");
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;script&gt;x&lt;/script&gt;");
   });
 });
 
@@ -178,12 +186,17 @@ describe("sendTeacherReviewNeededEmail", () => {
     expect(msg.html).toContain("https://site.example.test/admin");
   });
 
-  // Known gap, as for the booking email: the instructor's name and email go
-  // into the HTML unescaped.
-  it.fails("escapes HTML in the instructor's name and the reason", async () => {
+  it("escapes HTML in the instructor's name, email and the reason", async () => {
     const email = await loadEmail({ RESEND_API_KEY: "key", ADMIN_EMAILS: "a@example.test" });
-    await email.sendTeacherReviewNeededEmail({ teacherName: "<script>x</script>", teacherEmail: "t@example.test", reason: "r" });
-    expect(send.mock.calls[0][0].html).not.toContain("<script>");
+    await email.sendTeacherReviewNeededEmail({
+      teacherName: "<script>x</script>",
+      teacherEmail: "t<i>@example.test",
+      reason: "<b>bad</b>",
+    });
+    const html = send.mock.calls[0][0].html;
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<i>");
+    expect(html).not.toContain("<b>bad</b>");
   });
 
   it("does nothing without admin addresses, and never throws on failure", async () => {

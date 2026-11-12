@@ -45,10 +45,18 @@ describe("GET /api/teachers/[id]/slots", () => {
 
   it("covers the next 14 days, repeating each week", async () => {
     const body = await readJson(await getSlots(teacher.profile.id));
-    const dates = [...new Set((body.slots as { date: string }[]).map((s) => s.date))];
-    expect(dates.length).toBeGreaterThanOrEqual(2);
-    expect(dates.length).toBeLessThanOrEqual(3);
+    const dates = [...new Set((body.slots as { date: string }[]).map((s) => s.date))].sort();
+    // A weekly rule falls on 2 days in a 14-day window. If today is that
+    // weekday and the slots have already passed, only the later one is left,
+    // so the count depends on when the test runs: 1 or 2, never more.
+    expect(dates.length).toBeGreaterThanOrEqual(1);
+    expect(dates.length).toBeLessThanOrEqual(2);
     expect(dates.every((d) => d >= daysFromToday(0) && d <= daysFromToday(13))).toBe(true);
+    expect(dates.every((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === WEEKDAY)).toBe(true);
+    if (dates.length === 2) {
+      const gapDays = (Date.parse(dates[1]) - Date.parse(dates[0])) / 86_400_000;
+      expect(gapDays).toBe(7);
+    }
   });
 
   it("leaves out booked, blocked and extra time correctly", async () => {

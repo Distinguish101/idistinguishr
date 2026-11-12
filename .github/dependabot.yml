@@ -1,0 +1,23 @@
+# Weekly pull requests that bump out-of-date or vulnerable dependencies. Each
+# one runs the test job (see workflows/deploy.yml) before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # One pull request for all the small updates, not one per package.
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

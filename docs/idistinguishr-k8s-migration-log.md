@@ -855,3 +855,13 @@ be a variable while debugging the migration itself.
   database awake around the clock. The readiness probe now uses `/api/health` (no database query), patched live and
   changed in `k8s/deployment.yaml` (not yet committed; the next deploy applies it). Also cleared 14 GB of old container images from the
   VM (disk 83% to 42%). Full write-up and database options: build log section 37.
+
+- **Pipeline and web-server changes (2026-11-12).** Read-only checks of the live cluster: 2/2 app pods Ready with 0
+  restarts, the autoscaler applied (1% of 70% CPU), one Traefik pod, node about 5% CPU and 32% memory; DNS points
+  straight at the VM (Cloudflare is DNS-only). Changes: `.github/workflows/deploy.yml` now also runs the tests on pull
+  requests (build and deploy only on push), skips deploys for pushes that only change `docs/` or Markdown, and ends with
+  a smoke test that needs `https://idistinguishr.com/api/health` and the home page to answer 200 (it does not roll back;
+  the old pods keep serving during a failed rollout). Added `.github/dependabot.yml`. `next.config.js` now sends
+  security headers and drops `X-Powered-By`. Not done: pruning old images (a node-level job), a Traefik rate limit
+  (needs a check that the client address reaches Traefik). Details and the ranked list of remaining gaps: build log
+  section 38.

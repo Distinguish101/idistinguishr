@@ -8,6 +8,9 @@ import { prisma } from "@/lib/prisma";
 // each time; the pod that handles a status change drops its own entry
 // immediately, other pods catch up within the TTL.
 const TTL_MS = 60_000;
+// A cap, so the map can't grow without limit as more distinct users are seen.
+// When full, the oldest entry is dropped (a Map remembers insertion order).
+const MAX_ENTRIES = 5000;
 const cache = new Map<string, { status: UserStatus | null; at: number }>();
 
 export async function getUserStatus(userId: string): Promise<UserStatus | null> {
@@ -16,6 +19,9 @@ export async function getUserStatus(userId: string): Promise<UserStatus | null> 
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
   const status = user?.status ?? null;
+  if (!cache.has(userId) && cache.size >= MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value as string);
+  }
   cache.set(userId, { status, at: Date.now() });
   return status;
 }

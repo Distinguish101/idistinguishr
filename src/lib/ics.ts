@@ -26,13 +26,12 @@ export function generateBookingIcs(params: {
   const mo = lessonDate.getUTCMonth() + 1;
   const d = lessonDate.getUTCDate();
 
-  const startMinutes = h * 60 + m;
-  const endMinutes = startMinutes + durationMinutes;
-  const endH = Math.floor(endMinutes / 60) % 24;
-  const endM = endMinutes % 60;
+  // The end is the lesson date plus the minutes, so a lesson that runs past
+  // midnight ends on the next day (and rolls over the month or year if needed).
+  const end = new Date(Date.UTC(y, mo - 1, d) + (h * 60 + m + durationMinutes) * 60_000);
 
   const dtStart = `${y}${pad(mo)}${pad(d)}T${pad(h)}${pad(m)}00`;
-  const dtEnd = `${y}${pad(mo)}${pad(d)}T${pad(endH)}${pad(endM)}00`;
+  const dtEnd = `${end.getUTCFullYear()}${pad(end.getUTCMonth() + 1)}${pad(end.getUTCDate())}T${pad(end.getUTCHours())}${pad(end.getUTCMinutes())}00`;
   const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
   const location = format === "ONLINE" ? "Online" : locationText ?? "In person";

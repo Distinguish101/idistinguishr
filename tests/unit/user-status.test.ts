@@ -44,6 +44,17 @@ describe("getUserStatus (per-process cache, 60 seconds)", () => {
     expect(await getUserStatus("u-forget")).toBe("DEACTIVATED");
   });
 
+  it("keeps at most 5000 users, dropping the oldest first", async () => {
+    findUnique.mockResolvedValue({ status: "ACTIVE" });
+    for (let i = 0; i < 5020; i++) await getUserStatus(`u-cap-${i}`);
+    findUnique.mockClear();
+
+    await getUserStatus("u-cap-5019"); // newest: still cached
+    expect(findUnique).not.toHaveBeenCalled();
+    await getUserStatus("u-cap-0"); // oldest: was dropped, so it asks again
+    expect(findUnique).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps users separate", async () => {
     findUnique.mockImplementation(async ({ where }: { where: { id: string } }) => ({
       status: where.id === "u-a" ? "ACTIVE" : "DELETED",

@@ -149,8 +149,9 @@ async function handleStripeWebhook(req: Request, span: Span) {
       // go unnoticed for over a week — see build log §24. A real
       // stripe-signature header arrived and still didn't verify, so this
       // is a config problem, not request noise.
+      // The reason goes to the log and the alert email, not back to the caller.
       await sendWebhookVerificationFailedAlert({ path: "thin", reason: message });
-      return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
+      return NextResponse.json({ error: "Webhook signature verification failed." }, { status: 400 });
     }
 
     span.setAttribute("stripe.event_kind", "thin");
@@ -169,7 +170,7 @@ async function handleStripeWebhook(req: Request, span: Span) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
     await sendWebhookVerificationFailedAlert({ path: "classic", reason: message });
-    return NextResponse.json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 });
+    return NextResponse.json({ error: "Webhook signature verification failed." }, { status: 400 });
   }
 
   span.setAttribute("stripe.event_kind", "classic");

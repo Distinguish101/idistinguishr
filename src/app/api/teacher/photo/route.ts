@@ -26,8 +26,11 @@ function limited(userId: string) {
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "TEACHER") {
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.role !== "TEACHER") {
+    return NextResponse.json({ error: "Only instructors can upload a photo." }, { status: 403 });
   }
   if (!storageEnabled()) {
     return NextResponse.json({ error: "Photo upload isn't available yet." }, { status: 503 });

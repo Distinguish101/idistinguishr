@@ -64,11 +64,19 @@ describe("generateBookingIcs", () => {
     expect(field(ics, "SUMMARY")).toBe("Lesson with A\\, B\\; C\\\\D\\nE");
   });
 
-  // Known limitation, recorded so a fix flips this to a normal passing test:
-  // a lesson that runs past midnight gets an end time on the *same* date,
-  // i.e. an end before the start.
-  it.fails("moves the end date forward when the lesson passes midnight", () => {
+  it("moves the end date forward when the lesson passes midnight", () => {
     const ics = generateBookingIcs({ ...base, startTime: "23:30", durationMinutes: 60 });
     expect(field(ics, "DTEND")).toBe("20261106T003000");
+  });
+
+  it("rolls the end over a new month and year", () => {
+    const ics = generateBookingIcs({
+      ...base,
+      lessonDate: new Date("2026-12-31T00:00:00Z"),
+      startTime: "23:30",
+      durationMinutes: 60,
+    });
+    expect(field(ics, "DTSTART")).toBe("20261231T233000");
+    expect(field(ics, "DTEND")).toBe("20270101T003000");
   });
 });

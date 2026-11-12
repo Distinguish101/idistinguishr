@@ -1810,3 +1810,60 @@ unnecessary: it is free, running and not what failed.
 `idistinguishr-migrate-*` pods (harmless leftovers); add image pruning to the deploy workflow; decide whether to
 self-host Postgres. Uncommitted at the time of writing: the test suite and its three fixes (section 36) and this probe
 change, so none of it is deployed yet.
+
+## 38. Backend walkthrough, ranked gaps, and the cheap fixes (2026-11-12)
+
+**What happened.** The user worked through the 25 backend areas of their Notion note "Software Engineering" (languages
+to scaling and reliability) one at a time, as a way to learn how the project is built. The result is a page "IdistinguishR"
+under that note: for each area, a plain explanation, what this project does and where, and a tick-box list of gaps. Doing
+it meant reading the code closely and checking the live site and cluster read-only. Findings that changed earlier claims:
+the contact form and photo upload do have a rate limiter (in memory, per pod) and forgot-password caps 3 emails per
+account per hour; `src/lib/user-status.ts` is a 60-second per-pod cache; every page is rendered per visit because the
+root layout reads `cookies()` for the theme, so every home page visit queries the database; Cloudflare is DNS-only (no
+CDN or proxy; the domain resolves straight to the VM); the autoscaler is applied and working (2 replicas, 1% CPU of
+70%); the node is at about 5% CPU and 32% memory; Traefik (not the Service) spreads requests across the pods.
+
+**Fixed in this change.**
+- Security headers on every response (`next.config.js`): Strict-Transport-Security (180 days, no subdomains or preload),
+  X-Content-Type-Options, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy. `X-Powered-By` removed. Checked on a
+  production build with curl. Not added: a Content-Security-Policy (needs the page's scripts and styles inventoried first).
+- Custom `not-found.tsx` and `error.tsx` pages (before: Next.js defaults).
+- Booking confirmation page now re-fetches itself every 2 seconds for up to 30 seconds while the payment is being
+  confirmed (`AutoRefresh.tsx`), and the cancelled view tells a charged student to get in touch, quoting the booking id.
+- Emails now escape HTML in names, location, instructor email and reasons (booking confirmation, instructor review
+  needed, webhook alert). Closes the two known bugs recorded as `it.fails`.
+- Calendar (.ics) end time now rolls onto the next day, month or year when a lesson runs past midnight. Closes the third
+  `it.fails`. All three expected-fail tests are now normal passing tests.
+- Stripe webhook 400 responses no longer include the verification failure reason (it is still logged and emailed).
+- Photo upload returns 403 (not 401) for a signed-in non-instructor.
+- The account-status cache is capped at 5000 entries (oldest dropped first).
+- CI: tests also run on pull requests into main (build and deploy only on push); pushes that only change `docs/` or
+  Markdown no longer deploy; a smoke test after the rollout requires `/api/health` and the home page to answer 200.
+  Added `.github/dependabot.yml` (weekly npm, Docker and GitHub Actions updates).
+- Test fix: `slots-route` "covers the next 14 days" failed on Thursday afternoons because it assumed today's slots were
+  still ahead; it now accepts 1 or 2 dates and checks they are Thursdays 7 days apart.
+- Result: 471 tests pass (was 466 plus 3 expected-fail), `tsc` clean, production build succeeds.
+
+**Deliberately not done, and why.** Old-image pruning in the deploy workflow: pruning is a node-level job (the workflow
+only has kubectl). Rate limiting for sign-in and signup at Traefik: needs a check that the client's real address
+reaches Traefik first, or everyone shares one bucket. Caching the home page's public reads: a behaviour change that
+deserves its own change. Lowering the autoscaler maximum: the reasoning (CPU limits versus 2 CPUs, database
+connections) is unverified. Pinning GitHub Actions to commit hashes. A Content-Security-Policy. The Node 20 to 22
+change in the Dockerfile is a separate commit (Docker was not running here, so the image could not be test-built).
+
+**Gaps still open, in priority order.**
+1. No independent database backup and no tested restore; check Neon's restore window in its console.
+2. No external uptime monitor (use `/api/health`, not `?ready=1`, so it does not keep Neon awake).
+3. Verify the late-payment case: a hold expires, someone else books the slot, then the first student pays. The webhook
+   skips a booking that is no longer PENDING_PAYMENT, so the payment looks to be ignored with no refund or alert.
+4. No rate limiting on sign-in and signup.
+5. Every page is built per visit and reads the database; consider caching public reads, and decide the database plan.
+6. No timeouts on outbound calls (Stripe, Resend, Anthropic); no retry for emails; AI vetting runs inside the webhook.
+7. Recovery: keep the secret values in a password manager, export the Cloudflare DNS records, write a rebuild-from-nothing
+   guide, confirm the VM's public IP is reserved.
+8. Content-Security-Policy.
+9. Tests: payments are excluded; no end-to-end test of the booking flow; no coverage measurement.
+10. Load test, then revisit the autoscaler maximum and database connection pooling. Also: alerts (disk, certificate, pod
+    restarts), central logs, image pruning, scheduled cleanup of abandoned bookings and used reset tokens.
+
+The full tick-box lists are on the Notion page; fixed items are ticked there with the date.

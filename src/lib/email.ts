@@ -36,7 +36,7 @@ export async function sendBookingConfirmationEmail(params: {
     month: "long",
     timeZone: "UTC",
   });
-  const formatLabel = params.format === "ONLINE" ? "Online" : params.locationText ?? "In person";
+  const formatLabel = escapeHtml(params.format === "ONLINE" ? "Online" : params.locationText ?? "In person");
   const price = (params.priceTotalMinorUnits / 100).toFixed(2);
 
   try {
@@ -45,8 +45,8 @@ export async function sendBookingConfirmationEmail(params: {
       to: [params.to],
       subject: `You're booked with ${params.teacherName} — ${dateLabel}`,
       html: `
-        <p>Hi ${params.studentName},</p>
-        <p>Your lesson with <strong>${params.teacherName}</strong> is confirmed.</p>
+        <p>Hi ${escapeHtml(params.studentName)},</p>
+        <p>Your lesson with <strong>${escapeHtml(params.teacherName)}</strong> is confirmed.</p>
         <ul>
           <li><strong>Date:</strong> ${dateLabel}</li>
           <li><strong>Time:</strong> ${params.startTime}</li>
@@ -167,9 +167,9 @@ export async function sendTeacherReviewNeededEmail(params: {
       to: adminEmails,
       subject: `Instructor profile needs review — ${params.teacherName}`,
       html: `
-        <p>${params.teacherName} (${params.teacherEmail}) finished Stripe onboarding, but the automated
+        <p>${escapeHtml(params.teacherName)} (${escapeHtml(params.teacherEmail)}) finished Stripe onboarding, but the automated
         first-pass review didn't approve them outright:</p>
-        <p><em>${params.reason}</em></p>
+        <p><em>${escapeHtml(params.reason)}</em></p>
         <p>They're still sitting in Pending — take a look on <a href="${SITE_URL}/admin">/admin</a> when you get a chance.</p>
       `,
     });
@@ -213,7 +213,7 @@ export async function sendWebhookVerificationFailedAlert(params: {
       subject: "Stripe webhook is failing to verify",
       html: `
         <p>A Stripe webhook delivery to <code>/api/webhooks/stripe</code> (${params.path} path)
-        was rejected: <em>${params.reason}</em></p>
+        was rejected: <em>${escapeHtml(params.reason)}</em></p>
         <p>This usually means <code>STRIPE_WEBHOOK_SECRET</code> or
         <code>STRIPE_THIN_WEBHOOK_SECRET</code> in Vercel's env vars no longer matches the
         signing secret on the actual Stripe endpoint/event destination — booking confirmations,

@@ -116,7 +116,7 @@ describe("POST /api/teacher/photo", () => {
     signOut();
     expect((await upload(JPEG_BYTES)).status).toBe(401);
     signInAs({ id: userId, role: "STUDENT" });
-    expect((await upload(JPEG_BYTES)).status).toBe(401);
+    expect((await upload(JPEG_BYTES)).status).toBe(403);
     expect(s3.requests).toHaveLength(0);
   });
 
