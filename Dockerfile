@@ -6,7 +6,7 @@
 # ---------------------------------------------------------------------------
 # deps: install exactly what package-lock.json pins, nothing more
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS deps
+FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -23,7 +23,7 @@ RUN npm ci
 # actually talks to a real database or Stripe. Real values are injected at
 # runtime via a k8s Secret and are never baked into the image.
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -49,7 +49,7 @@ RUN npm run build
 # Dockerfile, --target=builder) is used for that instead, since it still has
 # the full `prisma` CLI in node_modules.
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
